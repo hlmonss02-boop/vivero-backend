@@ -14,17 +14,16 @@ const pedidosClientesRoutes = require('./routes/pedidosClientes.routes');
 
 const app = express();
 
-// ✅ CONFIGURACIÓN CORS CORRECTA
+// ✅ CORS para producción (cuando sepas la URL de la escuela, la agregas)
+// Por ahora, permitimos todo para que funcione mientras pruebas
 app.use(cors({
-    origin: '*',  // Permite todas las conexiones (temporal para pruebas)
+    origin: '*',  // Temporal - después cambias por la URL de la escuela
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Middleware para JSON
 app.use(express.json());
 
-// Rutas
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/plantas', plantasRoutes);
