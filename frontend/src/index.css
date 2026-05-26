@@ -1,0 +1,64 @@
+@import "tailwindcss";
+/* Reset y estilos base responsivos */
+* {
+    box-sizing: border-box;
+}
+
+/* Tamaños de texto responsivos */
+html {
+    font-size: 16px;
+}
+
+@media (max-width: 640px) {
+    html {
+        font-size: 14px;
+    }
+    
+    /* Botones más grandes para tocar */
+    button, 
+    a,
+    [role="button"],
+    input[type="submit"] {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Espaciado reducido en móvil */
+    .p-4 {
+        padding: 0.75rem !important;
+    }
+    
+    .p-6 {
+        padding: 1rem !important;
+    }
+    
+    /* Tablas responsivas */
+    .table-responsive {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Grids responsivos */
+    .grid {
+        gap: 0.75rem !important;
+    }
+    
+    /* Tarjetas más compactas */
+    .rounded-xl {
+        border-radius: 0.75rem !important;
+    }
+}
+
+/* Mejorar scroll en móvil */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Ocultar scrollbar en móvil pero mantener funcionalidad */
+@media (max-width: 640px) {
+    .overflow-y-auto {
+        -webkit-overflow-scrolling: touch;
+    }
+}
