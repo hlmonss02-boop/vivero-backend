@@ -2,14 +2,17 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
     Receipt, Calendar, User, Eye, DollarSign, CreditCard, 
-    TrendingUp, Search, Trash2, Package, Phone, X
+    TrendingUp, Search, Trash2, Package
 } from 'lucide-react';
-import { API_URL } from '../config';
+
+const API_URL = 'http://localhost:3000/api';
 
 function MisVentas() {
     const [ventas, setVentas] = useState([]);
+    const [ventasFiltradas, setVentasFiltradas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filtro, setFiltro] = useState('');
+    const [filtroFecha, setFiltroFecha] = useState('todos'); // todos, dia, semana, mes
     const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
     const [detalles, setDetalles] = useState([]);
 
@@ -27,11 +30,51 @@ function MisVentas() {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setVentas(response.data);
+            aplicarFiltroFecha(response.data, filtroFecha);
         } catch (error) {
             console.error('Error cargando ventas:', error);
         } finally {
             setLoading(false);
         }
+    };
+
+    // Función para filtrar por fecha
+    const aplicarFiltroFecha = (lista, tipo) => {
+        if (tipo === 'todos') {
+            setVentasFiltradas(lista);
+            return;
+        }
+        
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        
+        let fechaLimite = new Date();
+        
+        switch(tipo) {
+            case 'dia':
+                fechaLimite = hoy;
+                break;
+            case 'semana':
+                fechaLimite.setDate(hoy.getDate() - 7);
+                break;
+            case 'mes':
+                fechaLimite.setMonth(hoy.getMonth() - 1);
+                break;
+            default:
+                fechaLimite = hoy;
+        }
+        
+        const filtradas = lista.filter(venta => {
+            const fechaVenta = new Date(venta.fecha_servidor);
+            return fechaVenta >= fechaLimite;
+        });
+        
+        setVentasFiltradas(filtradas);
+    };
+
+    const handleFiltroFechaChange = (tipo) => {
+        setFiltroFecha(tipo);
+        aplicarFiltroFecha(ventas, tipo);
     };
 
     const verDetalle = async (id) => {
@@ -52,46 +95,25 @@ function MisVentas() {
         setDetalles([]);
     };
 
-    // Eliminar venta
-    const eliminarVenta = async (id, folio) => {
-        if (!isDueño) {
-            alert('Solo el dueño puede eliminar ventas');
-            return;
-        }
-        
-        const confirmar = window.confirm(`¿Eliminar la venta ${folio}? Esta acción no se puede deshacer.`);
-        if (!confirmar) return;
-
-        try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`${API_URL}/ventas/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            alert('Venta eliminada correctamente');
-            cargarVentas();
-        } catch (error) {
-            alert(error.response?.data?.error || 'Error al eliminar venta');
-        }
-    };
-
-    const ventasFiltradas = ventas.filter(venta =>
+    // Filtrar por texto (folio o cliente)
+    const ventasPorTexto = ventasFiltradas.filter(venta =>
         venta.folio_ticket.toLowerCase().includes(filtro.toLowerCase()) ||
         (venta.cliente_nombre && venta.cliente_nombre.toLowerCase().includes(filtro.toLowerCase()))
     );
 
-    const totalVentas = ventas.length;
-    const totalIngresos = ventas.reduce((sum, v) => sum + parseFloat(v.total_pagado), 0);
+    const totalVentas = ventasFiltradas.length;
+    const totalIngresos = ventasFiltradas.reduce((sum, v) => sum + parseFloat(v.total_pagado), 0);
 
     return (
         <div>
-            {/* Estadísticas - SOLO para el DUEÑO */}
+            {/* Estadísticas */}
             {isDueño && (
                 <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="rounded-xl p-5 shadow-md" style={{ backgroundColor: '#CADBB7' }}>
                         <div className="flex justify-between items-center">
                             <div>
                                 <p className="text-sm opacity-70 flex items-center gap-1" style={{ color: '#1B4332' }}>
-                                    <Receipt size={16} /> Total de ventas
+                                    <Receipt size={16} /> Ventas
                                 </p>
                                 <p className="text-3xl font-bold mt-1" style={{ color: '#1B4332' }}>{totalVentas}</p>
                             </div>
@@ -104,7 +126,7 @@ function MisVentas() {
                         <div className="flex justify-between items-center">
                             <div>
                                 <p className="text-sm opacity-70 flex items-center gap-1" style={{ color: '#1B4332' }}>
-                                    <DollarSign size={16} /> Total ingresos
+                                    <DollarSign size={16} /> Ingresos
                                 </p>
                                 <p className="text-3xl font-bold mt-1" style={{ color: '#1B4332' }}>${totalIngresos.toFixed(2)}</p>
                             </div>
@@ -116,7 +138,41 @@ function MisVentas() {
                 </div>
             )}
 
-            {/* Buscador */}
+            {/* Filtros por fecha */}
+            <div className="bg-white rounded-xl shadow-md p-4 mb-4">
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        onClick={() => handleFiltroFechaChange('todos')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filtroFecha === 'todos' ? 'text-white' : 'bg-gray-100 text-gray-700'}`}
+                        style={filtroFecha === 'todos' ? { backgroundColor: '#485935', color: 'white' } : {}}
+                    >
+                        📅 Todos
+                    </button>
+                    <button
+                        onClick={() => handleFiltroFechaChange('dia')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filtroFecha === 'dia' ? 'text-white' : 'bg-gray-100 text-gray-700'}`}
+                        style={filtroFecha === 'dia' ? { backgroundColor: '#485935', color: 'white' } : {}}
+                    >
+                        📆 Hoy
+                    </button>
+                    <button
+                        onClick={() => handleFiltroFechaChange('semana')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filtroFecha === 'semana' ? 'text-white' : 'bg-gray-100 text-gray-700'}`}
+                        style={filtroFecha === 'semana' ? { backgroundColor: '#485935', color: 'white' } : {}}
+                    >
+                        📊 Última semana
+                    </button>
+                    <button
+                        onClick={() => handleFiltroFechaChange('mes')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filtroFecha === 'mes' ? 'text-white' : 'bg-gray-100 text-gray-700'}`}
+                        style={filtroFecha === 'mes' ? { backgroundColor: '#485935', color: 'white' } : {}}
+                    >
+                        📈 Último mes
+                    </button>
+                </div>
+            </div>
+
+            {/* Buscador por texto */}
             <div className="bg-white rounded-xl shadow-md p-4 mb-6">
                 <div className="relative">
                     <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#93A267' }} />
@@ -133,35 +189,30 @@ function MisVentas() {
 
             {/* Lista de ventas */}
             {loading ? (
-                <div className="text-center py-20">
-                    <div className="animate-pulse text-4xl mb-4">📋</div>
-                    <p style={{ color: '#93A267' }}>Cargando ventas...</p>
-                </div>
-            ) : ventasFiltradas.length === 0 ? (
+                <p className="text-center text-gray-500">Cargando ventas...</p>
+            ) : ventasPorTexto.length === 0 ? (
                 <div className="bg-white rounded-2xl shadow-md p-12 text-center">
                     <Receipt size={48} className="mx-auto mb-3" style={{ color: '#CADBB7' }} />
-                    <p style={{ color: '#93A267' }}>No hay ventas registradas</p>
+                    <p style={{ color: '#93A267' }}>No hay ventas en este período</p>
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {ventasFiltradas.map((venta) => (
+                    {ventasPorTexto.map((venta) => (
                         <div key={venta.id_venta} className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition">
                             <div className="p-5" style={{ borderBottom: '1px solid #CADBB7' }}>
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                                     <div className="flex-1">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <p className="font-bold flex items-center gap-1" style={{ color: '#1B4332' }}>
-                                                <Receipt size={14} /> {venta.folio_ticket}
-                                            </p>
+                                        <p className="font-bold flex items-center gap-2" style={{ color: '#1B4332' }}>
+                                            <Receipt size={14} /> {venta.folio_ticket}
                                             {isDueño && venta.vendedor_nombre && (
-                                                <span className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1" style={{ backgroundColor: '#E8EFE0', color: '#1B4332' }}>
-                                                    <User size={10} /> {venta.vendedor_nombre}
+                                                <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#E8EFE0', color: '#1B4332' }}>
+                                                    <User size={10} className="inline mr-1" /> {venta.vendedor_nombre}
                                                 </span>
                                             )}
-                                        </div>
+                                        </p>
                                         <div className="flex items-center gap-3 mt-1 flex-wrap">
                                             <p className="text-sm flex items-center gap-1" style={{ color: '#93A267' }}>
-                                                <Calendar size={12} /> {new Date(venta.fecha_servidor).toLocaleString()}
+                                                <Calendar size={12} /> {new Date(venta.fecha_servidor).toLocaleDateString()}
                                             </p>
                                             {venta.cliente_nombre && (
                                                 <p className="text-sm flex items-center gap-1" style={{ color: '#93A267' }}>
@@ -177,24 +228,13 @@ function MisVentas() {
                                         <p className="text-sm flex items-center gap-1 justify-end" style={{ color: '#93A267' }}>
                                             <CreditCard size={12} /> {venta.metodo_pago}
                                         </p>
-                                        <div className="flex gap-2 mt-2 justify-end">
-                                            <button
-                                                onClick={() => verDetalle(venta.id_venta)}
-                                                className="text-sm flex items-center gap-1 transition hover:opacity-70"
-                                                style={{ color: '#93A267' }}
-                                            >
-                                                <Eye size={14} /> Ver detalle
-                                            </button>
-                                            {isDueño && (
-                                                <button
-                                                    onClick={() => eliminarVenta(venta.id_venta, venta.folio_ticket)}
-                                                    className="text-sm flex items-center gap-1 transition hover:opacity-70"
-                                                    style={{ color: '#D97757' }}
-                                                >
-                                                    <Trash2 size={14} /> Eliminar
-                                                </button>
-                                            )}
-                                        </div>
+                                        <button
+                                            onClick={() => verDetalle(venta.id_venta)}
+                                            className="text-sm flex items-center gap-1 mt-1 transition hover:opacity-70"
+                                            style={{ color: '#93A267' }}
+                                        >
+                                            <Eye size={14} /> Ver detalle
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -215,12 +255,12 @@ function MisVentas() {
                         </div>
                         
                         <div className="border-b pb-3 mb-3" style={{ borderColor: '#CADBB7' }}>
-                            <p className="flex items-center gap-2"><strong>Folio:</strong> {ventaSeleccionada.folio_ticket}</p>
-                            <p className="flex items-center gap-2 mt-1"><strong>Fecha:</strong> {new Date(ventaSeleccionada.fecha_servidor).toLocaleString()}</p>
+                            <p><strong>Folio:</strong> {ventaSeleccionada.folio_ticket}</p>
+                            <p><strong>Fecha:</strong> {new Date(ventaSeleccionada.fecha_servidor).toLocaleString()}</p>
                             {ventaSeleccionada.cliente_nombre && (
-                                <p className="flex items-center gap-2 mt-1"><strong>Cliente:</strong> {ventaSeleccionada.cliente_nombre}</p>
+                                <p><strong>Cliente:</strong> {ventaSeleccionada.cliente_nombre}</p>
                             )}
-                            <p className="flex items-center gap-2 mt-1"><strong>Método de pago:</strong> {ventaSeleccionada.metodo_pago}</p>
+                            <p><strong>Método de pago:</strong> {ventaSeleccionada.metodo_pago}</p>
                         </div>
                         
                         <h3 className="font-bold mb-2 flex items-center gap-2" style={{ color: '#1B4332' }}>
@@ -238,9 +278,7 @@ function MisVentas() {
                         </div>
                         
                         <div className="border-t pt-3" style={{ borderColor: '#CADBB7' }}>
-                            <p className="text-xl font-bold text-right flex items-center justify-end gap-2" style={{ color: '#D97757' }}>
-                                Total: ${ventaSeleccionada.total_pagado}
-                            </p>
+                            <p className="text-xl font-bold text-right" style={{ color: '#D97757' }}>Total: ${ventaSeleccionada.total_pagado}</p>
                         </div>
                     </div>
                 </div>

@@ -44,6 +44,19 @@ function Proveedores() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Validaciones
+    if (!form.nombre.trim()) {
+        alert('El nombre del proveedor es requerido');
+        return;
+    }
+    
+    if (form.telefono && !/^\d{10}$/.test(form.telefono) || form.telefono && !/^[\d\s-]+$/.test(form.telefono)) {
+        alert('El teléfono debe tener 10 dígitos y solo puede contener números, espacios y guiones');
+        return;
+        
+    }
+
         try {
             const token = localStorage.getItem('token');
             const config = { headers: { Authorization: `Bearer ${token}` } };
