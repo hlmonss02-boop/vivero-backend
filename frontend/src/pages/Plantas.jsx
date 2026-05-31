@@ -15,18 +15,18 @@ function Plantas() {
     const [editando, setEditando] = useState(null);
     const [proveedores, setProveedores] = useState([]);
     const [form, setForm] = useState({
-    nombre: '',
-    descripcion: '',
-    categoria: '',
-    precio_base: '',
-    precio_ciento: '',
-    precio_docena: '',
-    stock: '',           // ← Cambiado de 0 a ''
-    unidad_medida: 'Pieza',
-    costo_compra: '',    // ← Cambiado de 0 a ''
-    imagen: null,
-    id_proveedor: ''
-});
+        nombre: '',
+        descripcion: '',
+        categoria: '',
+        precio_base: '',
+        precio_ciento: '',
+        precio_docena: '',
+        stock: '',           // ← Cambiado de 0 a ''
+        unidad_medida: 'Pieza',
+        costo_compra: '',    // ← Cambiado de 0 a ''
+        imagen: null,
+        id_proveedor: ''
+    });
 
     useEffect(() => {
         cargarPlantas();
@@ -37,7 +37,11 @@ function Plantas() {
         setLoading(true);
         try {
             const response = await axios.get(`${API_URL}/plantas`);
-            setPlantas(response.data);
+            // Ordenar alfabéticamente por nombre
+            const plantasOrdenadas = response.data.sort((a, b) =>
+                a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+            );
+            setPlantas(plantasOrdenadas);
         } catch (error) {
             console.error('Error cargando plantas:', error);
         } finally {
@@ -84,51 +88,51 @@ function Plantas() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-    // ✅ VALIDACIONES
-    // Validar nombre
-    if (!form.nombre.trim()) {
-        alert('El nombre de la planta es requerido');
-        return;
-    }
-    
-    // Validar que el nombre solo tenga letras y espacios
-    const nombreRegex = /^[a-zA-ZáéíóúñÑ\s]+$/;
-    if (!nombreRegex.test(form.nombre.trim())) {
-        alert('El nombre solo puede contener letras y espacios');
-        return;
-    }
-    
-    // Validar precio
-    if (!form.precio_base || form.precio_base <= 0) {
-        alert('El precio debe ser mayor a 0');
-        return;
-    }
-    
-    // Validar que el precio sea número válido
-    if (isNaN(parseFloat(form.precio_base))) {
-        alert('El precio debe ser un número válido');
-        return;
-    }
-    
-    // Validar stock
-    if (form.stock < 0) {
-        alert('El stock no puede ser negativo');
-        return;
-    }
-    
-    // Validar teléfono (si se ingresa)
-    if (form.telefono && !/^\d{10}$/.test(form.telefono)) {
-        alert('El teléfono debe tener 10 dígitos');
-        return;
-    }
+        // ✅ VALIDACIONES
+        // Validar nombre
+        if (!form.nombre.trim()) {
+            alert('El nombre de la planta es requerido');
+            return;
+        }
 
-    // Validar correo (si se ingresa)
-    if (form.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) {
-        alert('Ingrese un correo electrónico válido');
-        return;
-    }
+        // Validar que el nombre solo tenga letras y espacios
+        const nombreRegex = /^[a-zA-ZáéíóúñÑ\s]+$/;
+        if (!nombreRegex.test(form.nombre.trim())) {
+            alert('El nombre solo puede contener letras y espacios');
+            return;
+        }
 
-    
+        // Validar precio
+        if (!form.precio_base || form.precio_base <= 0) {
+            alert('El precio debe ser mayor a 0');
+            return;
+        }
+
+        // Validar que el precio sea número válido
+        if (isNaN(parseFloat(form.precio_base))) {
+            alert('El precio debe ser un número válido');
+            return;
+        }
+
+        // Validar stock
+        if (form.stock < 0) {
+            alert('El stock no puede ser negativo');
+            return;
+        }
+
+        // Validar teléfono (si se ingresa)
+        if (form.telefono && !/^\d{10}$/.test(form.telefono)) {
+            alert('El teléfono debe tener 10 dígitos');
+            return;
+        }
+
+        // Validar correo (si se ingresa)
+        if (form.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) {
+            alert('Ingrese un correo electrónico válido');
+            return;
+        }
+
+
 
         const formData = new FormData();
         formData.append('nombre', form.nombre);
@@ -137,9 +141,9 @@ function Plantas() {
         formData.append('precio_base', form.precio_base);
         formData.append('precio_ciento', form.precio_ciento || 0);
         formData.append('precio_docena', form.precio_docena || 0);
-        formData.append('stock', form.stock === '' ? 0 : form.stock); 
+        formData.append('stock', form.stock === '' ? 0 : form.stock);
         formData.append('unidad_medida', form.unidad_medida);
-        formData.append('costo_compra', form.costo_compra === '' ? 0 : form.costo_compra); 
+        formData.append('costo_compra', form.costo_compra === '' ? 0 : form.costo_compra);
         formData.append('id_proveedor', form.id_proveedor);
         if (form.imagen) {
             formData.append('imagen', form.imagen);
@@ -201,9 +205,9 @@ function Plantas() {
             precio_base: planta.precio_base,
             precio_ciento: planta.precio_ciento || '',
             precio_docena: planta.precio_docena || '',
-             stock: planta.stock === 0 ? '' : planta.stock, 
+            stock: planta.stock === 0 ? '' : planta.stock,
             unidad_medida: planta.unidad_medida || 'Pieza',
-             costo_compra: planta.costo_compra === 0 ? '' : planta.costo_compra,
+            costo_compra: planta.costo_compra === 0 ? '' : planta.costo_compra,
             imagen: null,
             id_proveedor: planta.id_proveedor || ''
         });
@@ -462,7 +466,7 @@ function Plantas() {
                                 <option value="jardineria">🌳 Jardinería</option>
                                 <option value="hierbas">🌱 Hierbas de olor</option>
                             </select>
-                           
+
                             <div className="relative">
                                 <Truck size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#93A267' }} />
                                 <select name="id_proveedor" value={form.id_proveedor} onChange={handleChange} className="w-full pl-10 pr-4 py-3 rounded-lg border focus:outline-none focus:ring-1 appearance-none" style={{ borderColor: '#CADBB7' }}>
