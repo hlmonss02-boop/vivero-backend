@@ -113,7 +113,7 @@ function MisVentas() {
                         <div className="flex justify-between items-center">
                             <div>
                                 <p className="text-sm opacity-70 flex items-center gap-1" style={{ color: '#1B4332' }}>
-                                    <Receipt size={16} /> Ventas
+                                    <Receipt size={16} /> Ventas realizadas
                                 </p>
                                 <p className="text-3xl font-bold mt-1" style={{ color: '#1B4332' }}>{totalVentas}</p>
                             </div>

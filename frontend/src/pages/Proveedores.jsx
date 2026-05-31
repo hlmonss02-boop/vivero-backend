@@ -212,7 +212,7 @@ function Proveedores() {
                     <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#93A267' }} />
                     <input
                         type="text"
-                        placeholder="Buscar proveedor por nombre o contacto..."
+                        placeholder="Buscar proveedor por nombre"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 rounded-lg border focus:outline-none focus:ring-1"

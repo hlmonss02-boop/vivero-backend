@@ -396,7 +396,7 @@ function Plantas() {
                     <div className="flex justify-between items-center">
                         <div>
                             <p className="text-sm opacity-80 flex items-center gap-1 text-white">
-                                <AlertCircle size={16} /> Stock bajo
+                                <AlertCircle size={16} /> Plantas con stock bajo
                             </p>
                             <p className="text-3xl font-bold mt-1 text-white">{stockBajo}</p>
                         </div>
