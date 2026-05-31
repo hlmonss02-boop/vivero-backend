@@ -37,7 +37,10 @@ function CatalogoPublico() {
     const cargarPlantas = async () => {
         try {
             const response = await axios.get(`${API_URL}/plantas`);
-            setPlantas(response.data);
+            const plantasOrdenadas = response.data.sort((a, b) =>
+                a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+            );
+            setPlantas(plantasOrdenadas);
         } catch (error) {
             console.error('Error cargando plantas:', error);
         } finally {
@@ -212,11 +215,10 @@ function CatalogoPublico() {
                                 <button
                                     key={cat.id}
                                     onClick={() => setCategoriaSeleccionada(cat.id)}
-                                    className={`px-4 py-2 rounded-full text-sm font-medium transition flex items-center gap-1 ${
-                                        categoriaSeleccionada === cat.id
+                                    className={`px-4 py-2 rounded-full text-sm font-medium transition flex items-center gap-1 ${categoriaSeleccionada === cat.id
                                             ? 'text-white'
                                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
+                                        }`}
                                     style={categoriaSeleccionada === cat.id ? { backgroundColor: '#D97757' } : {}}
                                 >
                                     {cat.icono} {cat.nombre}
