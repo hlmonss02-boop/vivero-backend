@@ -12,7 +12,7 @@ import Mermas from './pages/Mermas';
 import Proveedores from './pages/Proveedores';
 import PedidosClientes from './pages/PedidosClientes';
 import DashboardHome from './pages/DashboardHome';
-import AhorrosPage from './pages/AhorrosPage';
+import AhorrosPage from './components/Ahorros';
 
 /*no tocar este dibujo, fue hecho por desarrolladores antiguos 
 _________________¶¶¶1___¶¶¶____¶¶¶1_______________
@@ -74,7 +74,7 @@ function App() {
                     <Route path="reporte-ganancias" element={<ReporteGanancias />} />
                     <Route path="mermas" element={<Mermas />} />
                     <Route path="pedidos" element={<PedidosClientes />} />
-                    <Route path="ahorros" element={<AhorrosPage />} />
+                    <Route path="ahorros" element={<Ahorros />} />
                 </Route>
 
                 {/* Redirigir cualquier ruta no encontrada al login */}

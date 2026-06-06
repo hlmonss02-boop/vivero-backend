@@ -23,17 +23,14 @@ function Ahorros() {
         try {
             const token = localStorage.getItem('token');
             
-            // Obtener porcentaje actual
             const porcentajeRes = await axios.get(`${API_URL}/ahorros/porcentaje`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
-            // Obtener total ahorrado
             const totalRes = await axios.get(`${API_URL}/ahorros/total`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
-            // Obtener historial
             const historialRes = await axios.get(`${API_URL}/ahorros/historial`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -44,7 +41,6 @@ function Ahorros() {
             setHistorial(historialRes.data);
         } catch (error) {
             console.error('Error cargando datos:', error);
-            alert('Error al cargar los datos de ahorros');
         } finally {
             setLoading(false);
         }
