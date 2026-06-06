@@ -4,7 +4,6 @@ import {
     Receipt, Calendar, User, Eye, DollarSign, CreditCard, 
     TrendingUp, Search, Trash2, Package
 } from 'lucide-react';
-
 import { API_URL } from '../config';
 
 function MisVentas() {
