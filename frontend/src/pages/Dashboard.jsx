@@ -4,7 +4,7 @@ import axios from 'axios';
 import { 
     ShoppingCart, Receipt, Leaf, Truck, Users, 
     BarChart3, AlertTriangle, LogOut, Menu, X, UserCircle,
-    ClipboardList
+    ClipboardList, PiggyBank
 } from 'lucide-react';
 
 import { API_URL } from '../config';
@@ -35,7 +35,8 @@ function Dashboard() {
         { to: "/dashboard/usuarios", icon: Users, title: "Usuarios", desc: "Gestionar vendedores", admin: true },
         { to: "/dashboard/reporte-ganancias", icon: BarChart3, title: "Ganancias", desc: "Reporte por planta", admin: true },
         { to: "/dashboard/mermas", icon: AlertTriangle, title: "Mermas", desc: "Plantas perdidas", admin: true },
-        { to: "/dashboard/pedidos", icon: ClipboardList, title: "Pedidos", desc: "Pedidos de clientes", admin: true }
+        { to: "/dashboard/pedidos", icon: ClipboardList, title: "Pedidos", desc: "Pedidos de clientes", admin: true },
+        { to: "/dashboard/ahorros", icon: PiggyBank, title: "Ahorros", desc: "Ahorro para renta", admin: true }
     ];
 
     const filteredMenu = menuItems.filter(item => !item.admin || (item.admin && isDueño));
