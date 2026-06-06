@@ -5,7 +5,7 @@ import {
     TrendingUp, Search, Trash2, Package
 } from 'lucide-react';
 
-const API_URL = 'http://localhost:3000/api';
+import { API_URL } from '../config';
 
 function MisVentas() {
     const [ventas, setVentas] = useState([]);

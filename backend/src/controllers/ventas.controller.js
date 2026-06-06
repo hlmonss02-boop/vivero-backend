@@ -18,10 +18,10 @@ const registrarVenta = async (req, res) => {
         metodo_pago,
         id_usuario,
         cliente_nombre,
-        cliente_telefono,
-        porcentaje_ahorro
+        cliente_telefono
     } = req.body;
 
+    // Validaciones
     if (!carrito || carrito.length === 0) {
         return res.status(400).json({ error: 'El carrito está vacío' });
     }
@@ -49,6 +49,10 @@ const registrarVenta = async (req, res) => {
             }
         }
 
+        // 🔥 Obtener porcentaje de ahorro actual desde la BD
+        const porcentajeAhorro = await getPorcentajeActual();
+        const monto_ahorrado = total_pagado * (porcentajeAhorro / 100);
+
         const folio_ticket = generarFolio();
 
         const ventaResult = await pool.query(
@@ -60,6 +64,7 @@ const registrarVenta = async (req, res) => {
 
         const venta = ventaResult.rows[0];
 
+        // Insertar detalles y actualizar stock
         for (const item of carrito) {
             await pool.query(
                 `INSERT INTO detalle_venta (id_venta, id_planta, cantidad, precio_pactado, subtotal, unidad_medida)
@@ -73,20 +78,32 @@ const registrarVenta = async (req, res) => {
             );
         }
 
-        if (porcentaje_ahorro && porcentaje_ahorro > 0) {
-            const monto_ahorrado = total_pagado * (porcentaje_ahorro / 100);
-            await pool.query(
-                `INSERT INTO ahorros (fecha, porcentaje, monto_ahorrado, destino, id_venta)
-                 VALUES (CURRENT_DATE, $1, $2, 'Renta', $3)`,
-                [porcentaje_ahorro, monto_ahorrado, venta.id_venta]
-            );
-        }
+        //Guardar el ahorro con el porcentaje actual
+        await pool.query(
+            `INSERT INTO ahorros (fecha, porcentaje, monto_ahorrado, destino, id_venta)
+             VALUES (CURRENT_DATE, $1, $2, 'Renta', $3)`,
+            [porcentajeAhorro, monto_ahorrado, venta.id_venta]
+        );
+
+        // Actualizar total ahorrado en la tabla de resumen (opcional)
+        // Esta tabla la puedes crear si quieres tener un acumulado rápido
+        await pool.query(
+            `INSERT INTO resumen_ahorros (fecha, total_ahorrado)
+             VALUES (CURRENT_DATE, (
+                SELECT COALESCE(SUM(monto_ahorrado), 0) FROM ahorros WHERE fecha <= CURRENT_DATE
+             ))
+             ON CONFLICT (fecha) DO UPDATE SET total_ahorrado = EXCLUDED.total_ahorrado`
+        );
 
         res.status(201).json({
             success: true,
             mensaje: 'Venta registrada exitosamente',
             venta: venta,
-            folio: folio_ticket
+            folio: folio_ticket,
+            ahorro: {
+                porcentaje: porcentajeAhorro,
+                monto: monto_ahorrado
+            }
         });
 
     } catch (error) {

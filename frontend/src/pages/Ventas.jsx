@@ -28,7 +28,10 @@ function Ventas() {
         setCargandoPlantas(true);
         try {
             const response = await axios.get(`${API_URL}/plantas`);
-            setPlantas(response.data);
+            const plantasOrdenadas = response.data.sort((a, b) =>
+                a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+            );
+            setPlantas(plantasOrdenadas);
         } catch (error) {
             console.error('Error cargando plantas:', error);
         } finally {
@@ -175,7 +178,7 @@ function Ventas() {
     const ModalAgregar = ({ planta, onClose, onAgregar }) => {
         const [unidadVenta, setUnidadVenta] = useState('Pieza');
         const [cantidad, setCantidad] = useState(1);
-        
+
         const getPrecioPorUnidad = () => {
             if (unidadVenta === 'Ciento' && planta.precio_ciento > 0) {
                 return planta.precio_ciento;
@@ -185,9 +188,9 @@ function Ventas() {
             }
             return planta.precio_base;
         };
-        
+
         const [precioNegociado, setPrecioNegociado] = useState(planta.precio_base);
-        
+
         useEffect(() => {
             const nuevoPrecio = getPrecioPorUnidad();
             setPrecioNegociado(nuevoPrecio);
@@ -204,12 +207,12 @@ function Ventas() {
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-2xl p-6 w-full max-w-md">
                     <h2 className="text-xl font-bold mb-4" style={{ color: '#1B4332' }}>{planta.nombre}</h2>
-                    
+
                     <label className="block mb-2 font-bold" style={{ color: '#1B4332' }}>Unidad de venta:</label>
-                    <select 
-                        value={unidadVenta} 
-                        onChange={(e) => setUnidadVenta(e.target.value)} 
-                        className="w-full border p-3 rounded-lg mb-4" 
+                    <select
+                        value={unidadVenta}
+                        onChange={(e) => setUnidadVenta(e.target.value)}
+                        className="w-full border p-3 rounded-lg mb-4"
                         style={{ borderColor: '#CADBB7' }}
                     >
                         <option value="Pieza">🌱 Por pieza - ${planta.precio_base}</option>
@@ -220,32 +223,32 @@ function Ventas() {
                             <option value="Docena">📦 Por docena (12 pzs) - ${planta.precio_docena}</option>
                         )}
                     </select>
-                    
+
                     <label className="block mb-2 font-bold" style={{ color: '#1B4332' }}>
                         Cantidad ({unidadVenta === 'Ciento' ? 'cientos' : unidadVenta === 'Docena' ? 'docenas' : 'piezas'}):
                     </label>
-                    <input 
-                        type="number" 
-                        min="1" 
-                        value={cantidad} 
-                        onChange={(e) => setCantidad(Number(e.target.value))} 
-                        className="w-full border p-3 rounded-lg mb-4" 
-                        style={{ borderColor: '#CADBB7' }} 
+                    <input
+                        type="number"
+                        min="1"
+                        value={cantidad}
+                        onChange={(e) => setCantidad(Number(e.target.value))}
+                        className="w-full border p-3 rounded-lg mb-4"
+                        style={{ borderColor: '#CADBB7' }}
                     />
-                    
+
                     <label className="block mb-2 font-bold" style={{ color: '#1B4332' }}>Precio por unidad ($):</label>
-                    <input 
-                        type="number" 
-                        step="0.01" 
-                        value={precioNegociado} 
-                        onChange={(e) => setPrecioNegociado(Number(e.target.value))} 
-                        className="w-full border p-3 rounded-lg mb-4" 
-                        style={{ borderColor: '#CADBB7' }} 
+                    <input
+                        type="number"
+                        step="0.01"
+                        value={precioNegociado}
+                        onChange={(e) => setPrecioNegociado(Number(e.target.value))}
+                        className="w-full border p-3 rounded-lg mb-4"
+                        style={{ borderColor: '#CADBB7' }}
                     />
                     <p className="text-xs mb-4" style={{ color: '#93A267' }}>
                         💡 El precio se actualiza automáticamente al cambiar la unidad. Puedes ajustarlo manualmente si negocias con el cliente.
                     </p>
-                    
+
                     <div className="bg-gray-50 p-3 rounded-lg mb-4">
                         <p className="text-sm font-medium" style={{ color: '#1B4332' }}>
                             Subtotal estimado: <span className="font-bold" style={{ color: '#D97757' }}>${(cantidad * precioNegociado).toLocaleString()}</span>
@@ -254,7 +257,7 @@ function Ventas() {
                             {cantidad} {unidadVenta === 'Ciento' ? 'cientos' : unidadVenta === 'Docena' ? 'docenas' : 'piezas'} = {unidadesReales} piezas
                         </p>
                     </div>
-                    
+
                     <div className="flex gap-3">
                         <button onClick={onClose} className="flex-1 bg-gray-200 p-3 rounded-lg" style={{ color: '#1B4332' }}>Cancelar</button>
                         <button onClick={handleAgregar} className="flex-1 p-3 rounded-lg text-white" style={{ backgroundColor: '#D97757' }}>Agregar</button>
@@ -400,32 +403,32 @@ function Ventas() {
                                 <div className="mt-4 space-y-3">
                                     <div className="relative">
                                         <Phone size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#93A267' }} />
-                                        <input 
-                                            type="text" 
-                                            placeholder="Nombre del cliente" 
-                                            value={clienteNombre} 
-                                            onChange={(e) => setClienteNombre(e.target.value)} 
-                                            className="w-full pl-10 pr-4 py-3 rounded-lg border" 
-                                            style={{ borderColor: '#CADBB7' }} 
+                                        <input
+                                            type="text"
+                                            placeholder="Nombre del cliente"
+                                            value={clienteNombre}
+                                            onChange={(e) => setClienteNombre(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-3 rounded-lg border"
+                                            style={{ borderColor: '#CADBB7' }}
                                         />
                                     </div>
                                     <div className="relative">
                                         <Phone size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#93A267' }} />
-                                        <input 
-                                            type="tel" 
-                                            placeholder="Teléfono para WhatsApp" 
-                                            value={clienteTelefono} 
-                                            onChange={(e) => setClienteTelefono(e.target.value)} 
-                                            className="w-full pl-10 pr-4 py-3 rounded-lg border" 
-                                            style={{ borderColor: '#CADBB7' }} 
+                                        <input
+                                            type="tel"
+                                            placeholder="Teléfono para WhatsApp"
+                                            value={clienteTelefono}
+                                            onChange={(e) => setClienteTelefono(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-3 rounded-lg border"
+                                            style={{ borderColor: '#CADBB7' }}
                                         />
                                     </div>
                                     <div className="relative">
                                         <CreditCard size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#93A267' }} />
-                                        <select 
-                                            value={metodoPago} 
-                                            onChange={(e) => setMetodoPago(e.target.value)} 
-                                            className="w-full pl-10 pr-4 py-3 rounded-lg border appearance-none" 
+                                        <select
+                                            value={metodoPago}
+                                            onChange={(e) => setMetodoPago(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-3 rounded-lg border appearance-none"
                                             style={{ borderColor: '#CADBB7' }}
                                         >
                                             <option value="Efectivo">💵 Efectivo</option>
@@ -436,37 +439,37 @@ function Ventas() {
                                         <label className="block text-sm font-bold mb-1 flex items-center gap-2" style={{ color: '#1B4332' }}>
                                             <PiggyBank size={16} style={{ color: '#D97757' }} /> Ahorro para renta: {porcentajeAhorro}%
                                         </label>
-                                        <input 
-                                            type="range" 
-                                            min="0" 
-                                            max="20" 
-                                            value={porcentajeAhorro} 
-                                            onChange={(e) => setPorcentajeAhorro(Number(e.target.value))} 
-                                            className="w-full" 
-                                            style={{ accentColor: '#D97757' }} 
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="20"
+                                            value={porcentajeAhorro}
+                                            onChange={(e) => setPorcentajeAhorro(Number(e.target.value))}
+                                            className="w-full"
+                                            style={{ accentColor: '#D97757' }}
                                         />
                                     </div>
                                 </div>
 
                                 {/* Botones de acción */}
                                 <div className="flex gap-3 mt-6">
-                                    <button 
-                                        onClick={cancelarVenta} 
+                                    <button
+                                        onClick={cancelarVenta}
                                         className="flex-1 py-3 rounded-lg font-semibold transition hover:opacity-80 flex items-center justify-center gap-1"
                                         style={{ backgroundColor: '#FCE4E4', color: '#D97757' }}
                                     >
                                         <X size={16} /> Cancelar Venta
                                     </button>
-                                    <button 
-                                        onClick={() => setMostrarCarrito(false)} 
+                                    <button
+                                        onClick={() => setMostrarCarrito(false)}
                                         className="flex-1 py-3 rounded-lg font-semibold transition hover:opacity-80"
                                         style={{ backgroundColor: '#CADBB7', color: '#1B4332' }}
                                     >
                                         Seguir comprando
                                     </button>
-                                    <button 
-                                        onClick={handleVenta} 
-                                        disabled={loading} 
+                                    <button
+                                        onClick={handleVenta}
+                                        disabled={loading}
                                         className="flex-1 py-3 rounded-lg font-semibold transition hover:opacity-80 disabled:opacity-50 text-white"
                                         style={{ backgroundColor: '#D97757' }}
                                     >

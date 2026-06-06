@@ -11,6 +11,7 @@ const ventasRoutes = require('./routes/ventas.routes');
 const mermasRoutes = require('./routes/mermas.routes');
 const proveedoresRoutes = require('./routes/proveedores.routes');
 const pedidosClientesRoutes = require('./routes/pedidosClientes.routes');
+const ahorrosRoutes = require('./routes/ahorros.routes');
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/api/ventas', ventasRoutes);
 app.use('/api/mermas', mermasRoutes);
 app.use('/api/proveedores', proveedoresRoutes);
 app.use('/api/pedidos-clientes', pedidosClientesRoutes);
+app.use('/api/ahorros', ahorrosRoutes);
 
 app.get('/', (req, res) => {
     res.send('API Vivero Juanito 🌱');
