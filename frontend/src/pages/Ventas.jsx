@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { pdf } from '@react-pdf/renderer';
 import TicketPDF from '../components/TicketPDF';
-import { ShoppingCart, Search, Trash2, Phone, CreditCard, PiggyBank, X } from 'lucide-react';
+import { ShoppingCart, Search, Trash2, Phone, CreditCard, X, Leaf, Flower2, Trees, Sprout, Package, DollarSign } from 'lucide-react';
 import { API_URL } from '../config';
 
 function Ventas() {
@@ -12,7 +12,6 @@ function Ventas() {
     const [metodoPago, setMetodoPago] = useState('Efectivo');
     const [clienteNombre, setClienteNombre] = useState('');
     const [clienteTelefono, setClienteTelefono] = useState('');
-    const [porcentajeAhorro, setPorcentajeAhorro] = useState(0);
     const [loading, setLoading] = useState(false);
     const [mostrarCarrito, setMostrarCarrito] = useState(false);
     const [cargandoPlantas, setCargandoPlantas] = useState(true);
@@ -48,6 +47,16 @@ function Ventas() {
         return 'otras';
     };
 
+    const getIconoCategoria = (categoria) => {
+        const cat = getCategoriaId(categoria);
+        switch(cat) {
+            case 'ornato': return <Flower2 size={14} style={{ color: '#D97757' }} />;
+            case 'jardineria': return <Trees size={14} style={{ color: '#D97757' }} />;
+            case 'hierbas': return <Sprout size={14} style={{ color: '#D97757' }} />;
+            default: return <Leaf size={14} style={{ color: '#D97757' }} />;
+        }
+    };
+
     const plantasFiltradas = plantas.filter(planta =>
         planta.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
         (planta.categoria && planta.categoria.toLowerCase().includes(busqueda.toLowerCase()))
@@ -60,11 +69,9 @@ function Ventas() {
         otras: plantasFiltradas.filter(p => getCategoriaId(p.categoria) === 'otras')
     };
 
-    // Agregar al carrito con cálculo correcto
     const agregarAlCarrito = (planta, unidadVenta, cantidad, precioPactado) => {
         const cantidadPorUnidad = unidadVenta === 'Ciento' ? 100 : unidadVenta === 'Docena' ? 12 : 1;
         const cantidadReal = cantidad * cantidadPorUnidad;
-        // Subtotal = cantidad de unidades (cientos/docenas/piezas) × precio pactado
         const subtotal = cantidad * precioPactado;
 
         const nuevoItem = {
@@ -86,7 +93,6 @@ function Ventas() {
         setCarrito(nuevoCarrito);
     };
 
-    // Cancelar toda la venta
     const cancelarVenta = () => {
         if (window.confirm('¿Cancelar toda la venta? Se perderán los productos agregados.')) {
             setCarrito([]);
@@ -108,14 +114,14 @@ function Ventas() {
 
         try {
             const token = localStorage.getItem('token');
+            // ✅ ELIMINADO porcentaje_ahorro (ya no se envía)
             const ventaData = {
                 carrito: carrito,
                 total_pagado: totalCarrito,
                 metodo_pago: metodoPago,
                 id_usuario: usuario.id_usuario,
                 cliente_nombre: clienteNombre,
-                cliente_telefono: clienteTelefono,
-                porcentaje_ahorro: porcentajeAhorro
+                cliente_telefono: clienteTelefono
             };
 
             const response = await axios.post(`${API_URL}/ventas`, ventaData, {
@@ -124,7 +130,7 @@ function Ventas() {
 
             generarTicketPDF(response.data.venta, carrito, totalCarrito, response.data.folio);
 
-            alert(`✅ Venta registrada exitosamente\nFolio: ${response.data.folio}`);
+            alert(`Venta registrada exitosamente\nFolio: ${response.data.folio}`);
 
             setCarrito([]);
             setClienteNombre('');
@@ -155,7 +161,7 @@ function Ventas() {
             const pdfUrl = URL.createObjectURL(blob);
 
             if (clienteTelefono) {
-                const mensaje = `🌿 VIVERO JUANITO 🌿\n\n📄 Folio: ${folio}\n💰 Total: $${total}\n\nAdjunto encontrará su ticket en PDF.\n\n¡Gracias por su compra!`;
+                const mensaje = `VIVERO JUANITO\n\nFolio: ${folio}\nTotal: $${total}\n\nAdjunto encontrará su ticket en PDF.\n\n¡Gracias por su compra!`;
                 const urlWhatsApp = `https://wa.me/${clienteTelefono}?text=${encodeURIComponent(mensaje)}`;
                 window.open(urlWhatsApp, '_blank');
                 const link = document.createElement('a');
@@ -174,7 +180,6 @@ function Ventas() {
         }
     };
 
-    // Modal para agregar producto con cambio automático de precio
     const ModalAgregar = ({ planta, onClose, onAgregar }) => {
         const [unidadVenta, setUnidadVenta] = useState('Pieza');
         const [cantidad, setCantidad] = useState(1);
@@ -215,12 +220,12 @@ function Ventas() {
                         className="w-full border p-3 rounded-lg mb-4"
                         style={{ borderColor: '#CADBB7' }}
                     >
-                        <option value="Pieza">🌱 Por pieza - ${planta.precio_base}</option>
+                        <option value="Pieza">Por pieza - ${planta.precio_base}</option>
                         {planta.precio_ciento > 0 && (
-                            <option value="Ciento">📦 Por ciento (100 pzs) - ${planta.precio_ciento}</option>
+                            <option value="Ciento">Por ciento (100 pzs) - ${planta.precio_ciento}</option>
                         )}
                         {planta.precio_docena > 0 && (
-                            <option value="Docena">📦 Por docena (12 pzs) - ${planta.precio_docena}</option>
+                            <option value="Docena">Por docena (12 pzs) - ${planta.precio_docena}</option>
                         )}
                     </select>
 
@@ -246,7 +251,7 @@ function Ventas() {
                         style={{ borderColor: '#CADBB7' }}
                     />
                     <p className="text-xs mb-4" style={{ color: '#93A267' }}>
-                        💡 El precio se actualiza automáticamente al cambiar la unidad. Puedes ajustarlo manualmente si negocias con el cliente.
+                        El precio se actualiza automáticamente al cambiar la unidad. Puedes ajustarlo manualmente si negocias con el cliente.
                     </p>
 
                     <div className="bg-gray-50 p-3 rounded-lg mb-4">
@@ -267,13 +272,14 @@ function Ventas() {
         );
     };
 
-    const SeccionCategoria = ({ titulo, icono, plantas: lista, colorBg }) => {
+    const SeccionCategoria = ({ titulo, plantas: lista, colorBg }) => {
         if (lista.length === 0) return null;
+        const icono = getIconoCategoria(titulo === 'Ornato' ? 'ornato' : titulo === 'Jardinería' ? 'jardineria' : titulo === 'Hierbas de olor' ? 'hierbas' : 'otras');
         return (
             <div className="mb-8">
                 <div className={`${colorBg} rounded-xl p-2 mb-3`}>
                     <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: '#1B4332' }}>
-                        <span>{icono}</span> {titulo}
+                        {icono} {titulo}
                         <span className="text-xs px-2 py-0.5 rounded-full ml-2" style={{ backgroundColor: '#CADBB7', color: '#1B4332' }}>{lista.length}</span>
                     </h2>
                 </div>
@@ -284,21 +290,30 @@ function Ventas() {
                                 {planta.imagen_url ? (
                                     <img src={planta.imagen_url} alt={planta.nombre} className="w-full h-full object-cover" />
                                 ) : (
-                                    <span className="text-4xl">🌿</span>
+                                    <Leaf size={32} style={{ color: '#93A267' }} />
                                 )}
                             </div>
                             <div className="p-3">
                                 <h3 className="font-bold text-sm truncate" style={{ color: '#1B4332' }}>{planta.nombre}</h3>
                                 <div className="mt-1 space-y-0.5">
-                                    <p className="text-xs" style={{ color: '#93A267' }}>💵 Pieza: ${planta.precio_base}</p>
+                                    <p className="text-xs flex items-center gap-1" style={{ color: '#93A267' }}>
+                                        <DollarSign size={10} /> Pieza: ${planta.precio_base}
+                                    </p>
                                     {planta.precio_ciento > 0 && (
-                                        <p className="text-xs" style={{ color: '#93A267' }}>📦 Ciento: ${planta.precio_ciento}</p>
+                                        <p className="text-xs flex items-center gap-1" style={{ color: '#93A267' }}>
+                                            <Package size={10} /> Ciento: ${planta.precio_ciento}
+                                        </p>
                                     )}
                                     {planta.precio_docena > 0 && (
-                                        <p className="text-xs" style={{ color: '#93A267' }}>📦 Docena: ${planta.precio_docena}</p>
+                                        <p className="text-xs flex items-center gap-1" style={{ color: '#93A267' }}>
+                                            <Package size={10} /> Docena: ${planta.precio_docena}
+                                        </p>
                                     )}
                                 </div>
-                                <p className={`text-xs ${planta.stock < 20 ? 'text-red-500 font-bold' : 'text-gray-500'}`}>Stock: {planta.stock}</p>
+                                <p className={`text-xs ${planta.stock < 20 ? 'font-bold' : ''}`} 
+                                   style={{ color: planta.stock < 20 ? '#D97757' : '#93A267' }}>
+                                    Stock: {planta.stock}
+                                </p>
                                 <button
                                     onClick={() => setModalPlanta(planta)}
                                     disabled={planta.stock === 0}
@@ -336,7 +351,9 @@ function Ventas() {
             {/* Lista de plantas por categoría */}
             {cargandoPlantas ? (
                 <div className="text-center py-20">
-                    <div className="animate-pulse text-4xl mb-4">🌿</div>
+                    <div className="animate-pulse flex justify-center mb-4">
+                        <Leaf size={48} style={{ color: '#CADBB7' }} />
+                    </div>
                     <p style={{ color: '#93A267' }}>Cargando plantas...</p>
                 </div>
             ) : plantasFiltradas.length === 0 ? (
@@ -345,10 +362,10 @@ function Ventas() {
                 </div>
             ) : (
                 <>
-                    <SeccionCategoria titulo="Ornato" icono="🌸" plantas={plantasPorCategoria.ornato} colorBg="bg-pink-50" />
-                    <SeccionCategoria titulo="Jardinería" icono="🌳" plantas={plantasPorCategoria.jardineria} colorBg="bg-blue-50" />
-                    <SeccionCategoria titulo="Hierbas de olor" icono="🌱" plantas={plantasPorCategoria.hierbas} colorBg="bg-green-50" />
-                    <SeccionCategoria titulo="Otras categorías" icono="📦" plantas={plantasPorCategoria.otras} colorBg="bg-gray-50" />
+                    <SeccionCategoria titulo="Ornato" plantas={plantasPorCategoria.ornato} colorBg="bg-pink-50" />
+                    <SeccionCategoria titulo="Jardinería" plantas={plantasPorCategoria.jardineria} colorBg="bg-blue-50" />
+                    <SeccionCategoria titulo="Hierbas de olor" plantas={plantasPorCategoria.hierbas} colorBg="bg-green-50" />
+                    <SeccionCategoria titulo="Otras categorías" plantas={plantasPorCategoria.otras} colorBg="bg-gray-50" />
                 </>
             )}
 
@@ -431,24 +448,11 @@ function Ventas() {
                                             className="w-full pl-10 pr-4 py-3 rounded-lg border appearance-none"
                                             style={{ borderColor: '#CADBB7' }}
                                         >
-                                            <option value="Efectivo">💵 Efectivo</option>
-                                            <option value="Transferencia">🏦 Transferencia</option>
+                                            <option value="Efectivo">Efectivo</option>
+                                            <option value="Transferencia">Transferencia</option>
                                         </select>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-bold mb-1 flex items-center gap-2" style={{ color: '#1B4332' }}>
-                                            <PiggyBank size={16} style={{ color: '#D97757' }} /> Ahorro para renta: {porcentajeAhorro}%
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="20"
-                                            value={porcentajeAhorro}
-                                            onChange={(e) => setPorcentajeAhorro(Number(e.target.value))}
-                                            className="w-full"
-                                            style={{ accentColor: '#D97757' }}
-                                        />
-                                    </div>
+                                    {/* ✅ SECCIÓN DE AHORRO ELIMINADA - ya es automático */}
                                 </div>
 
                                 {/* Botones de acción */}
@@ -473,7 +477,7 @@ function Ventas() {
                                         className="flex-1 py-3 rounded-lg font-semibold transition hover:opacity-80 disabled:opacity-50 text-white"
                                         style={{ backgroundColor: '#D97757' }}
                                     >
-                                        {loading ? 'Procesando...' : '💸 Pagar'}
+                                        {loading ? 'Procesando...' : 'Pagar'}
                                     </button>
                                 </div>
                             </>
