@@ -1,10 +1,12 @@
 const pool = require('../config/db');
 
-// Obtener porcentaje actual de ahorro
+// ==================== FUNCIONES INTERNAS ====================
 const getPorcentajeActual = async () => {
     const result = await pool.query('SELECT porcentaje FROM config_ahorros LIMIT 1');
     return result.rows[0]?.porcentaje || 20;
 };
+
+// ==================== CONTROLADORES ====================
 
 // Obtener configuración completa
 const getConfig = async (req, res) => {
@@ -14,9 +16,22 @@ const getConfig = async (req, res) => {
         
         res.json({
             porcentaje: parseFloat(result.rows[0]?.porcentaje || 20),
-            total_ahorrado: parseFloat(totalResult.rows[0]?.total || 0)
+            total_ahorrado: parseFloat(totalResult.rows[0]?.total || 0),
+            modo: result.rows[0]?.modo || 'automatico'
         });
     } catch (error) {
+        console.error('Error en getConfig:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Obtener solo el porcentaje actual
+const getPorcentaje = async (req, res) => {
+    try {
+        const porcentaje = await getPorcentajeActual();
+        res.json({ porcentaje });
+    } catch (error) {
+        console.error('Error en getPorcentaje:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -35,12 +50,32 @@ const updatePorcentaje = async (req, res) => {
     }
 
     try {
-        await pool.query(
-            'UPDATE config_ahorros SET porcentaje = $1, updated_at = NOW() WHERE id = 1',
-            [porcentaje]
-        );
+        // Verificar si existe la tabla config_ahorros
+        const existe = await pool.query("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'config_ahorros')");
+        
+        if (existe.rows[0].exists) {
+            const tieneDatos = await pool.query('SELECT COUNT(*) FROM config_ahorros');
+            if (tieneDatos.rows[0].count === 0) {
+                await pool.query('INSERT INTO config_ahorros (porcentaje) VALUES ($1)', [porcentaje]);
+            } else {
+                await pool.query('UPDATE config_ahorros SET porcentaje = $1, updated_at = NOW()', [porcentaje]);
+            }
+        } else {
+            // Si la tabla no existe, la creamos
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS config_ahorros (
+                    id SERIAL PRIMARY KEY,
+                    porcentaje DECIMAL(5,2) DEFAULT 20.00,
+                    modo VARCHAR(20) DEFAULT 'automatico',
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            `);
+            await pool.query('INSERT INTO config_ahorros (porcentaje) VALUES ($1)', [porcentaje]);
+        }
+        
         res.json({ mensaje: 'Porcentaje actualizado', porcentaje });
     } catch (error) {
+        console.error('Error en updatePorcentaje:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -51,6 +86,7 @@ const getTotalAhorrado = async (req, res) => {
         const result = await pool.query('SELECT COALESCE(SUM(monto_ahorrado), 0) as total FROM ahorros');
         res.json({ total_ahorrado: parseFloat(result.rows[0].total) });
     } catch (error) {
+        console.error('Error en getTotalAhorrado:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -67,13 +103,16 @@ const getHistorial = async (req, res) => {
         );
         res.json(result.rows);
     } catch (error) {
+        console.error('Error en getHistorial:', error);
         res.status(500).json({ error: error.message });
     }
 };
 
+// Exportar funciones
 module.exports = {
-    getPorcentajeActual,
+    getPorcentajeActual,  // para usar en otros controladores
     getConfig,
+    getPorcentaje,
     updatePorcentaje,
     getTotalAhorrado,
     getHistorial
