@@ -1,215 +1,161 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { BarChart3, TrendingUp, Package, Search, Filter, DollarSign, Leaf, Warehouse } from 'lucide-react';
+import { TrendingUp, DollarSign, PiggyBank, Percent, Leaf } from 'lucide-react';
 import { API_URL } from '../config';
 
 function ReporteGanancias() {
-    const [reporte, setReporte] = useState([]);
+    const [datos, setDatos] = useState({ plantas: [], total_ventas: 0, total_ahorro: 0, total_comision: 0, total_ganancia: 0 });
     const [loading, setLoading] = useState(true);
-    const [filtro, setFiltro] = useState('');
-    const [orden, setOrden] = useState('ganancia');
+    const [error, setError] = useState(null);
 
     const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
     const isDueño = usuario.rol === 'Dueño';
 
     useEffect(() => {
-        cargarReporte();
+        cargarDatos();
     }, []);
 
-    const cargarReporte = async () => {
+    const cargarDatos = async () => {
         try {
+            setLoading(true);
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${API_URL}/ventas/ganancias-por-planta`, {
+            
+            // Obtener ganancias reales por planta desde el backend
+            const response = await axios.get(`${API_URL}/ventas/ganancias-reales-por-planta`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setReporte(response.data);
-        } catch (error) {
-            console.error('Error cargando reporte:', error);
+            
+            const { plantas, porcentaje_ahorro, porcentaje_comision } = response.data;
+            
+            // Solo plantas con ventas
+            const conVentas = plantas.filter(p => p.cantidad_vendida > 0);
+            conVentas.sort((a, b) => b.ganancia_real - a.ganancia_real);
+            
+            // Calcular totales
+            const total_ventas = conVentas.reduce((s, p) => s + parseFloat(p.total_vendido), 0);
+            const total_ahorro = conVentas.reduce((s, p) => s + parseFloat(p.ahorro_total), 0);
+            const total_comision = conVentas.reduce((s, p) => s + parseFloat(p.comision_total), 0);
+            const total_ganancia = conVentas.reduce((s, p) => s + parseFloat(p.ganancia_real), 0);
+            
+            setDatos({
+                plantas: conVentas,
+                total_ventas,
+                total_ahorro,
+                total_comision,
+                total_ganancia,
+                porcentaje_ahorro,
+                porcentaje_comision
+            });
+        } catch (err) {
+            console.error('Error:', err);
+            setError(err.response?.data?.error || err.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const ordenarDatos = (datos) => {
-        let sorted = [...datos];
-        switch (orden) {
-            case 'ganancia':
-                sorted.sort((a, b) => b.ganancia - a.ganancia);
-                break;
-            case 'vendido':
-                sorted.sort((a, b) => b.total_vendido - a.total_vendido);
-                break;
-            case 'cantidad':
-                sorted.sort((a, b) => b.cantidad_vendida - a.cantidad_vendida);
-                break;
-            default:
-                break;
-        }
-        return sorted;
-    };
-
-    const datosFiltrados = ordenarDatos(
-        reporte.filter(planta =>
-            planta.nombre.toLowerCase().includes(filtro.toLowerCase())
-        )
-    );
-
-    const totalVendido = reporte.reduce((sum, p) => sum + parseFloat(p.total_vendido || 0), 0);
-    const totalGanancia = reporte.reduce((sum, p) => sum + parseFloat(p.ganancia || 0), 0);
-    const totalCantidad = reporte.reduce((sum, p) => sum + parseInt(p.cantidad_vendida || 0), 0);
-
     if (!isDueño) {
         return (
             <div className="text-center py-20">
-                <div className="text-6xl mb-4">⛔</div>
-                <h1 className="text-2xl font-bold mb-4" style={{ color: '#D97757' }}>Acceso Denegado</h1>
-                <p style={{ color: '#93A267' }}>Solo el dueño puede ver este reporte.</p>
+                <p style={{ color: '#D97757' }}>Acceso Denegado</p>
+                <p style={{ color: '#93A267' }}>Solo el dueño puede ver este reporte</p>
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div className="text-center py-20">
+                <div className="animate-spin w-8 h-8 border-4 rounded-full mx-auto mb-3" style={{ borderColor: '#D97757', borderTopColor: 'transparent' }}></div>
+                <p style={{ color: '#93A267' }}>Cargando ganancias...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="text-center py-20">
+                <p style={{ color: '#D97757' }}>Error: {error}</p>
+                <button onClick={cargarDatos} className="mt-3 px-4 py-2 rounded-lg text-white" style={{ backgroundColor: '#D97757' }}>
+                    Reintentar
+                </button>
+            </div>
+        );
+    }
+
+    if (datos.plantas.length === 0) {
+        return (
+            <div className="text-center py-20">
+                <Leaf size={48} className="mx-auto mb-3" style={{ color: '#CADBB7' }} />
+                <p style={{ color: '#93A267' }}>No hay ventas registradas</p>
             </div>
         );
     }
 
     return (
-        <div>
+        <div className="space-y-4 pb-4">
+            {/* Encabezado */}
+            <div className="rounded-xl p-4 text-white" style={{ background: 'linear-gradient(135deg, #485935 0%, #1B4332 100%)' }}>
+                <h1 className="text-lg font-bold flex items-center gap-2">
+                    <TrendingUp size={20} /> Ganancias Reales
+                </h1>
+                <p className="text-xs opacity-80 mt-1">
+                    Basado en ventas reales | Ahorro: {datos.porcentaje_ahorro}% | Comisión: {datos.porcentaje_comision}%
+                </p>
+            </div>
+
             {/* Tarjetas de resumen */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="rounded-xl p-5 shadow-md" style={{ backgroundColor: '#485935' }}>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <p className="text-sm opacity-80 flex items-center gap-1 text-white">
-                                <DollarSign size={16} /> Total Vendido
-                            </p>
-                            <p className="text-2xl font-bold mt-1 text-white">${totalVendido.toFixed(2)}</p>
-                        </div>
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#93A267' }}>
-                            <DollarSign size={24} style={{ color: 'white' }} />
-                        </div>
-                    </div>
+            <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white rounded-xl p-3 text-center shadow-sm border" style={{ borderColor: '#CADBB7' }}>
+                    <DollarSign size={18} className="mx-auto mb-1" style={{ color: '#D97757' }} />
+                    <p className="text-[11px]" style={{ color: '#93A267' }}>💰 Total Ventas</p>
+                    <p className="text-base font-bold" style={{ color: '#1B4332' }}>${datos.total_ventas.toFixed(2)}</p>
                 </div>
-                <div className="rounded-xl p-5 shadow-md" style={{ backgroundColor: '#D97757' }}>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <p className="text-sm opacity-80 flex items-center gap-1 text-white">
-                                <TrendingUp size={16} /> Ganancia Total
-                            </p>
-                            <p className="text-2xl font-bold mt-1 text-white">${totalGanancia.toFixed(2)}</p>
-                        </div>
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
-                            <TrendingUp size={24} style={{ color: 'white' }} />
-                        </div>
-                    </div>
+                <div className="bg-white rounded-xl p-3 text-center shadow-sm border" style={{ borderColor: '#CADBB7' }}>
+                    <TrendingUp size={18} className="mx-auto mb-1" style={{ color: '#D97757' }} />
+                    <p className="text-[11px]" style={{ color: '#93A267' }}>✅ Ganancia Real</p>
+                    <p className="text-base font-bold" style={{ color: '#D97757' }}>${datos.total_ganancia.toFixed(2)}</p>
                 </div>
-                <div className="rounded-xl p-5 shadow-md" style={{ backgroundColor: '#93A267' }}>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <p className="text-sm opacity-80 flex items-center gap-1 text-white">
-                                <Package size={16} /> Unidades Vendidas
-                            </p>
-                            <p className="text-2xl font-bold mt-1 text-white">{totalCantidad}</p>
-                        </div>
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
-                            <Package size={24} style={{ color: 'white' }} />
-                        </div>
-                    </div>
+                <div className="bg-white rounded-xl p-3 text-center shadow-sm border" style={{ borderColor: '#CADBB7' }}>
+                    <Percent size={18} className="mx-auto mb-1" style={{ color: '#D97757' }} />
+                    <p className="text-[11px]" style={{ color: '#93A267' }}>💸 Comisión {datos.porcentaje_comision}%</p>
+                    <p className="text-sm font-bold" style={{ color: '#D97757' }}>${datos.total_comision.toFixed(2)}</p>
+                </div>
+                <div className="bg-white rounded-xl p-3 text-center shadow-sm border" style={{ borderColor: '#CADBB7' }}>
+                    <PiggyBank size={18} className="mx-auto mb-1" style={{ color: '#D97757' }} />
+                    <p className="text-[11px]" style={{ color: '#93A267' }}>🐷 Ahorro {datos.porcentaje_ahorro}%</p>
+                    <p className="text-sm font-bold" style={{ color: '#D97757' }}>${datos.total_ahorro.toFixed(2)}</p>
                 </div>
             </div>
 
-            {/* Filtros y orden */}
-            <div className="bg-white rounded-xl shadow-md p-5 mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="relative">
-                        <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#93A267' }} />
-                        <input
-                            type="text"
-                            placeholder="Buscar planta por nombre..."
-                            value={filtro}
-                            onChange={(e) => setFiltro(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 rounded-lg border focus:outline-none focus:ring-1"
-                            style={{ borderColor: '#CADBB7' }}
-                        />
-                    </div>
-                    <div className="relative">
-                        <Filter size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#93A267' }} />
-                        <select
-                            value={orden}
-                            onChange={(e) => setOrden(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 rounded-lg border appearance-none focus:outline-none focus:ring-1"
-                            style={{ borderColor: '#CADBB7' }}
-                        >
-                            <option value="ganancia">📈 Ordenar por ganancia</option>
-                            <option value="vendido">💰 Ordenar por total vendido</option>
-                            <option value="cantidad">🌱 Ordenar por cantidad vendida</option>
-                        </select>
-                    </div>
+            {/* Lista de plantas con ganancia real */}
+            <div className="bg-white rounded-xl shadow-sm border overflow-hidden" style={{ borderColor: '#CADBB7' }}>
+                <div className="p-3 border-b" style={{ backgroundColor: '#F8FAF9' }}>
+                    <p className="text-sm font-bold flex items-center gap-1" style={{ color: '#1B4332' }}>
+                        <Leaf size={14} /> Ganancia por planta (solo con ventas)
+                    </p>
+                </div>
+                <div className="divide-y max-h-[400px] overflow-y-auto">
+                    {datos.plantas.map((planta) => (
+                        <div key={planta.id_planta} className="p-3 flex justify-between items-center">
+                            <span className="font-bold text-sm" style={{ color: '#1B4332' }}>{planta.nombre}</span>
+                            <span className="text-sm font-bold" style={{ color: '#D97757' }}>
+                                ${parseFloat(planta.ganancia_real).toFixed(2)}
+                            </span>
+                        </div>
+                    ))}
                 </div>
             </div>
 
-            {/* Tabla de reporte */}
-            {loading ? (
-                <div className="text-center py-20">
-                    <div className="animate-pulse text-4xl mb-4">📊</div>
-                    <p style={{ color: '#93A267' }}>Cargando reporte...</p>
+            {/* Resumen final */}
+            <div className="rounded-xl p-3" style={{ backgroundColor: '#E8EFE0' }}>
+                <div className="flex justify-between text-xs">
+                    <span style={{ color: '#1B4332' }}>🏆 Planta más rentable:</span>
+                    <span className="font-bold" style={{ color: '#D97757' }}>
+                        {datos.plantas[0]?.nombre} - ${parseFloat(datos.plantas[0]?.ganancia_real).toFixed(2)}
+                    </span>
                 </div>
-            ) : datosFiltrados.length === 0 ? (
-                <div className="bg-white rounded-2xl shadow-md p-12 text-center">
-                    <BarChart3 size={48} className="mx-auto mb-3" style={{ color: '#CADBB7' }} />
-                    <p style={{ color: '#93A267' }}>No hay ventas registradas aún</p>
-                </div>
-            ) : (
-                <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead style={{ backgroundColor: '#485935' }}>
-                                <tr>
-                                    <th className="p-3 text-left text-white">🌿 Planta</th>
-                                    <th className="p-3 text-center text-white">📦 Stock</th>
-                                    <th className="p-3 text-center text-white">🌱 Vendidas</th>
-                                    <th className="p-3 text-center text-white">💰 Precio</th>
-                                    <th className="p-3 text-center text-white">💵 Vendido</th>
-                                    <th className="p-3 text-center text-white">📈 Ganancia</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {datosFiltrados.map((planta, index) => (
-                                    <tr key={planta.id_planta} className={`border-b ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`} style={{ borderColor: '#CADBB7' }}>
-                                        <td className="p-3 font-bold" style={{ color: '#1B4332' }}>{planta.nombre}</td>
-                                        <td className="p-3 text-center">
-                                            <span className={`px-2 py-1 rounded-full text-xs ${planta.stock_actual < 20 ? 'text-white' : 'text-white'}`} 
-                                                  style={{ backgroundColor: planta.stock_actual < 20 ? '#D97757' : '#93A267' }}>
-                                                {planta.stock_actual}
-                                            </span>
-                                        </td>
-                                        <td className="p-3 text-center font-bold" style={{ color: '#1B4332' }}>{planta.cantidad_vendida || 0}</td>
-                                        <td className="p-3 text-center" style={{ color: '#1B4332' }}>${parseFloat(planta.precio_base).toFixed(2)}</td>
-                                        <td className="p-3 text-center font-bold" style={{ color: '#D97757' }}>${parseFloat(planta.total_vendido || 0).toFixed(2)}</td>
-                                        <td className="p-3 text-center">
-                                            <span className={`font-bold ${parseFloat(planta.ganancia || 0) > 0 ? '' : ''}`} 
-                                                  style={{ color: parseFloat(planta.ganancia || 0) > 0 ? '#93A267' : '#D97757' }}>
-                                                ${parseFloat(planta.ganancia || 0).toFixed(2)}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {/* Mensaje de resumen */}
-            {datosFiltrados.length > 0 && (
-                <div className="mt-6 p-5 rounded-xl" style={{ backgroundColor: '#E8EFE0' }}>
-                    <h3 className="font-bold mb-2 flex items-center gap-2" style={{ color: '#1B4332' }}>
-                        <BarChart3 size={18} /> Resumen
-                    </h3>
-                    <p className="text-sm" style={{ color: '#1B4332' }}>
-                        La planta más rentable es <strong style={{ color: '#D97757' }}>{datosFiltrados[0]?.nombre}</strong> 
-                        con una ganancia de <strong style={{ color: '#D97757' }}>${parseFloat(datosFiltrados[0]?.ganancia || 0).toFixed(2)}</strong>.
-                    </p>
-                    <p className="text-sm mt-1" style={{ color: '#1B4332' }}>
-                        🌟 Ganancia promedio por producto: <strong>${(totalGanancia / datosFiltrados.length).toFixed(2)}</strong>
-                    </p>
-                </div>
-            )}
+            </div>
         </div>
     );
 }

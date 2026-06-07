@@ -12,7 +12,7 @@ import Mermas from './pages/Mermas';
 import Proveedores from './pages/Proveedores';
 import PedidosClientes from './pages/PedidosClientes';
 import DashboardHome from './pages/DashboardHome';
-import AhorrosPage from './components/Ahorros';
+import Ahorros from './components/Ahorros';
 
 /*no tocar este dibujo, fue hecho por desarrolladores antiguos 
 _________________¶¶¶1___¶¶¶____¶¶¶1_______________

@@ -112,6 +112,64 @@ const registrarVenta = async (req, res) => {
     }
 };
 
+const getGananciasRealesPorPlanta = async (req, res) => {
+    try {
+        // Obtener porcentaje de ahorro actual (solo para referencia)
+        const configResult = await pool.query('SELECT porcentaje FROM config_ahorros LIMIT 1');
+        const porcentajeAhorroActual = parseFloat(configResult.rows[0]?.porcentaje || 20);
+        const porcentajeComision = 30;
+
+        // Calcular ganancias basadas en VENTAS REALES (cada venta tiene su propio porcentaje)
+        const query = `
+            SELECT 
+                p.id_planta,
+                p.nombre,
+                p.categoria,
+                p.stock as stock_actual,
+                COALESCE(SUM(dv.cantidad), 0) as cantidad_vendida,
+                COALESCE(SUM(dv.subtotal), 0) as total_vendido,
+                COALESCE(SUM(dv.cantidad * p.costo_compra), 0) as costo_total,
+                COALESCE(SUM(dv.subtotal) * 0.30, 0) as comision_total,
+                COALESCE((
+                    SELECT SUM(a.monto_ahorrado) 
+                    FROM ahorros a 
+                    WHERE a.id_venta IN (
+                        SELECT v.id_venta FROM ventas v
+                        JOIN detalle_venta dv2 ON v.id_venta = dv2.id_venta
+                        WHERE dv2.id_planta = p.id_planta
+                    )
+                ), 0) as ahorro_total,
+                COALESCE(SUM(dv.subtotal), 0) - 
+                COALESCE(SUM(dv.cantidad * p.costo_compra), 0) - 
+                COALESCE(SUM(dv.subtotal) * 0.30, 0) - 
+                COALESCE((
+                    SELECT SUM(a.monto_ahorrado) 
+                    FROM ahorros a 
+                    WHERE a.id_venta IN (
+                        SELECT v.id_venta FROM ventas v
+                        JOIN detalle_venta dv2 ON v.id_venta = dv2.id_venta
+                        WHERE dv2.id_planta = p.id_planta
+                    )
+                ), 0) as ganancia_real
+             FROM plantas p
+             LEFT JOIN detalle_venta dv ON p.id_planta = dv.id_planta
+             GROUP BY p.id_planta, p.nombre, p.categoria, p.stock
+             ORDER BY ganancia_real DESC
+        `;
+
+        const result = await pool.query(query);
+        res.json({
+            plantas: result.rows,
+            porcentaje_ahorro_actual: porcentajeAhorroActual,
+            porcentaje_comision: porcentajeComision,
+            nota: "Los ahorros mostrados son los que se registraron en cada venta con su porcentaje correspondiente"
+        });
+    } catch (error) {
+        console.error('Error al obtener ganancias reales:', error);
+        res.status(500).json({ error: 'Error al obtener ganancias reales' });
+    }
+};
+
 // Obtener ventas del día
 const getVentasHoy = async (req, res) => {
     try {

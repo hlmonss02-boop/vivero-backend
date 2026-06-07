@@ -21,5 +21,6 @@ router.get('/detalle/:id', authMiddleware, getDetalleVenta);
 router.get('/ventas-por-dia', authMiddleware, getVentasPorDia);
 router.get('/productos-mas-vendidos', authMiddleware, getProductosMasVendidos);
 router.delete('/:id', authMiddleware, eliminarVenta);
+router.get('/ganancias-reales-por-planta', authMiddleware, getGananciasRealesPorPlanta);
 
 module.exports = router;

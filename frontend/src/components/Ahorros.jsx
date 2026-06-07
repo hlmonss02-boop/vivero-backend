@@ -86,7 +86,7 @@ function Ahorros() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm flex items-center gap-2 text-white opacity-80">
-                                <PiggyBank size={18} /> Total ahorrado para renta
+                                <PiggyBank size={18} /> Total ahorrado
                             </p>
                             <p className="text-4xl font-bold mt-2 text-white">
                                 ${totalAhorrado.toLocaleString()}
@@ -116,7 +116,7 @@ function Ahorros() {
                                 <p className="text-sm" style={{ color: '#93A267' }}>Porcentaje actual</p>
                                 <p className="text-3xl font-bold" style={{ color: '#D97757' }}>{porcentaje}%</p>
                                 <p className="text-xs mt-1" style={{ color: '#93A267' }}>
-                                    De cada venta, se aparta {porcentaje}% para la renta
+                                    De cada venta, se aparta {porcentaje}% para el ahorro
                                 </p>
                             </div>
                             <button
