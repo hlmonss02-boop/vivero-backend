@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { getPorcentajeActual } = require('./ahorros.controller');
 
 // Generar folio más fácil de entender
 const generarFolio = () => {
@@ -21,7 +22,6 @@ const registrarVenta = async (req, res) => {
         cliente_telefono
     } = req.body;
 
-    // Validaciones
     if (!carrito || carrito.length === 0) {
         return res.status(400).json({ error: 'El carrito está vacío' });
     }
@@ -31,7 +31,6 @@ const registrarVenta = async (req, res) => {
     }
 
     try {
-        // Verificar stock antes de vender
         for (const item of carrito) {
             const stockResult = await pool.query(
                 'SELECT stock, nombre FROM plantas WHERE id_planta = $1',
@@ -49,7 +48,6 @@ const registrarVenta = async (req, res) => {
             }
         }
 
-        // 🔥 Obtener porcentaje de ahorro actual desde la BD
         const porcentajeAhorro = await getPorcentajeActual();
         const monto_ahorrado = total_pagado * (porcentajeAhorro / 100);
 
@@ -64,7 +62,6 @@ const registrarVenta = async (req, res) => {
 
         const venta = ventaResult.rows[0];
 
-        // Insertar detalles y actualizar stock
         for (const item of carrito) {
             await pool.query(
                 `INSERT INTO detalle_venta (id_venta, id_planta, cantidad, precio_pactado, subtotal, unidad_medida)
@@ -78,21 +75,10 @@ const registrarVenta = async (req, res) => {
             );
         }
 
-        //Guardar el ahorro con el porcentaje actual
         await pool.query(
             `INSERT INTO ahorros (fecha, porcentaje, monto_ahorrado, destino, id_venta)
              VALUES (CURRENT_DATE, $1, $2, 'Renta', $3)`,
             [porcentajeAhorro, monto_ahorrado, venta.id_venta]
-        );
-
-        // Actualizar total ahorrado en la tabla de resumen (opcional)
-        // Esta tabla la puedes crear si quieres tener un acumulado rápido
-        await pool.query(
-            `INSERT INTO resumen_ahorros (fecha, total_ahorrado)
-             VALUES (CURRENT_DATE, (
-                SELECT COALESCE(SUM(monto_ahorrado), 0) FROM ahorros WHERE fecha <= CURRENT_DATE
-             ))
-             ON CONFLICT (fecha) DO UPDATE SET total_ahorrado = EXCLUDED.total_ahorrado`
         );
 
         res.status(201).json({
@@ -112,14 +98,13 @@ const registrarVenta = async (req, res) => {
     }
 };
 
+// ========== NUEVA FUNCIÓN ==========
 const getGananciasRealesPorPlanta = async (req, res) => {
     try {
-        // Obtener porcentaje de ahorro actual (solo para referencia)
         const configResult = await pool.query('SELECT porcentaje FROM config_ahorros LIMIT 1');
         const porcentajeAhorroActual = parseFloat(configResult.rows[0]?.porcentaje || 20);
         const porcentajeComision = 30;
 
-        // Calcular ganancias basadas en VENTAS REALES (cada venta tiene su propio porcentaje)
         const query = `
             SELECT 
                 p.id_planta,
@@ -161,14 +146,14 @@ const getGananciasRealesPorPlanta = async (req, res) => {
         res.json({
             plantas: result.rows,
             porcentaje_ahorro_actual: porcentajeAhorroActual,
-            porcentaje_comision: porcentajeComision,
-            nota: "Los ahorros mostrados son los que se registraron en cada venta con su porcentaje correspondiente"
+            porcentaje_comision: porcentajeComision
         });
     } catch (error) {
         console.error('Error al obtener ganancias reales:', error);
         res.status(500).json({ error: 'Error al obtener ganancias reales' });
     }
 };
+// ========== FIN NUEVA FUNCIÓN ==========
 
 // Obtener ventas del día
 const getVentasHoy = async (req, res) => {
@@ -196,12 +181,12 @@ const getMisVentas = async (req, res) => {
 
         if (rol === 'Dueño') {
             query = `
-                SELECT v.*, u.nombre as vendedor_nombre, u.password,
+                SELECT v.*, u.nombre as vendedor_nombre,
                        COUNT(dv.id_detalle) as total_productos
                 FROM ventas v
                 JOIN usuarios u ON v.id_usuario = u.id_usuario
                 LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta
-                GROUP BY v.id_venta, u.nombre, u.password
+                GROUP BY v.id_venta, u.nombre
                 ORDER BY v.fecha_servidor DESC
             `;
             params = [];
@@ -346,17 +331,9 @@ const eliminarVenta = async (req, res) => {
     }
 
     try {
-        // 1. Eliminar ahorros asociados a la venta
         await pool.query('DELETE FROM ahorros WHERE id_venta = $1', [id]);
-
-        // 2. Eliminar detalles de la venta
         await pool.query('DELETE FROM detalle_venta WHERE id_venta = $1', [id]);
-
-        // 3. Eliminar la venta
-        const result = await pool.query(
-            'DELETE FROM ventas WHERE id_venta = $1 RETURNING *',
-            [id]
-        );
+        const result = await pool.query('DELETE FROM ventas WHERE id_venta = $1 RETURNING *', [id]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Venta no encontrada' });
@@ -376,6 +353,7 @@ module.exports = {
     getMisVentas,
     getDetalleVenta,
     getVentasPorDia,
-    getProductosMasVendidos,
-    eliminarVenta
+    getProductosMasVendidos,   
+    eliminarVenta,
+    getGananciasRealesPorPlanta 
 };
