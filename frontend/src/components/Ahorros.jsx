@@ -67,6 +67,23 @@ function Ahorros() {
         }
     };
 
+    // Función para formatear fecha en zona horaria de México
+    const formatearFecha = (fecha) => {
+        if (!fecha) return 'Fecha no disponible';
+        try {
+            return new Date(fecha).toLocaleString('es-MX', { 
+                timeZone: 'America/Mexico_City',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (error) {
+            return new Date(fecha).toLocaleDateString();
+        }
+    };
+
     if (loading) {
         return (
             <div className="text-center py-12">
@@ -165,7 +182,7 @@ function Ahorros() {
                                 </div>
                             </div>
                             <p className="text-xs" style={{ color: '#93A267' }}>
-                                💡 El nuevo porcentaje se aplicará automáticamente a todas las ventas a partir de ahora
+                                El nuevo porcentaje se aplicará automáticamente a todas las ventas a partir de ahora
                             </p>
                         </div>
                     )}
@@ -198,7 +215,7 @@ function Ahorros() {
                 </div>
             </div>
 
-            {/* Historial de ahorros */}
+            {/* Historial de ahorros - CON FECHA CORREGIDA */}
             <div className="bg-white rounded-xl shadow-md overflow-hidden">
                 <div className="p-4 border-b" style={{ borderColor: '#CADBB7' }}>
                     <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: '#1B4332' }}>
@@ -220,7 +237,7 @@ function Ahorros() {
                         <table className="w-full">
                             <thead style={{ backgroundColor: '#F8FAF9' }}>
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold" style={{ color: '#1B4332' }}>Fecha</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold" style={{ color: '#1B4332' }}>Fecha y hora</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold" style={{ color: '#1B4332' }}>Porcentaje</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold" style={{ color: '#1B4332' }}>Monto ahorrado</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold" style={{ color: '#1B4332' }}>Venta</th>
@@ -230,7 +247,7 @@ function Ahorros() {
                                 {historial.map((item, index) => (
                                     <tr key={item.id || index} className="border-t" style={{ borderColor: '#CADBB7' }}>
                                         <td className="px-4 py-3 text-sm" style={{ color: '#1B4332' }}>
-                                            {new Date(item.fecha).toLocaleDateString()}
+                                            {formatearFecha(item.fecha)}
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: '#E8EFE0', color: '#485935' }}>

@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { pdf } from '@react-pdf/renderer';
 import TicketPDF from '../components/TicketPDF';
-import { ShoppingCart, Search, Trash2, Phone, CreditCard, X, Leaf, Flower2, Trees, Sprout, Package, DollarSign } from 'lucide-react';
+import { 
+    ShoppingCart, Search, Trash2, Phone, CreditCard, X, 
+    Leaf, Flower2, Trees, Sprout, Package, DollarSign 
+} from 'lucide-react';
 import { API_URL } from '../config';
 
 function Ventas() {
@@ -104,6 +107,71 @@ function Ventas() {
 
     const totalCarrito = carrito.reduce((sum, item) => sum + item.subtotal, 0);
 
+    // ==================== FUNCIÓN GENERAR TICKET (OPTIMIZADA) ====================
+    const generarTicketPDF = async (venta, carritoItems, total, folio) => {
+        try {
+            setLoading(true);
+            
+            // 1. Generar el PDF
+            const blob = await pdf(
+                <TicketPDF
+                    venta={venta}
+                    carrito={carritoItems}
+                    total={total}
+                    folio={folio}
+                    vendedor={usuario.nombre}
+                />
+            ).toBlob();
+            
+            // 2. Detectar si es dispositivo móvil
+            const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            
+            if (isMobile && navigator.share) {
+                // 📱 CELULAR: Compartir directamente (adjunta el PDF automáticamente)
+                const file = new File([blob], `ticket_${folio}.pdf`, { type: 'application/pdf' });
+                
+                await navigator.share({
+                    title: `Ticket ${folio}`,
+                    text: `Vivero Juanito - Total: $${total.toFixed(2)}`,
+                    files: [file]
+                });
+                
+                alert('✅ Seleccione WhatsApp para enviar el ticket al cliente');
+                
+            } else {
+                // 💻 PC: Descargar y abrir WhatsApp con instrucciones
+                const pdfUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = pdfUrl;
+                link.download = `ticket_${folio}.pdf`;
+                link.click();
+                
+                if (clienteTelefono && clienteTelefono.trim() !== '') {
+                    let telefono = clienteTelefono.replace(/[^0-9]/g, '');
+                    if (telefono.length === 10) telefono = '52' + telefono;
+                    
+                    const mensaje = `🌿 VIVERO JUANITO 🌿\nFolio: ${folio}\nTotal: $${total.toFixed(2)}`;
+                    const urlWA = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
+                    
+                    if (confirm('✅ PDF descargado.\n\n¿Abrir WhatsApp para enviarlo al cliente?\n(Solo debe adjuntar el PDF descargado)')) {
+                        window.open(urlWA, '_blank');
+                    }
+                } else {
+                    alert('✅ PDF descargado. Puede enviarlo por WhatsApp cuando quiera');
+                }
+                
+                setTimeout(() => URL.revokeObjectURL(pdfUrl), 5000);
+            }
+            
+        } catch (error) {
+            console.error('Error generando ticket:', error);
+            alert('Error al generar el ticket');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ==================== REGISTRAR VENTA ====================
     const handleVenta = async () => {
         if (carrito.length === 0) {
             alert('Agrega productos al carrito');
@@ -114,7 +182,6 @@ function Ventas() {
 
         try {
             const token = localStorage.getItem('token');
-            // ✅ ELIMINADO porcentaje_ahorro (ya no se envía)
             const ventaData = {
                 carrito: carrito,
                 total_pagado: totalCarrito,
@@ -128,9 +195,10 @@ function Ventas() {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            generarTicketPDF(response.data.venta, carrito, totalCarrito, response.data.folio);
+            // Generar ticket después de registrar la venta
+            await generarTicketPDF(response.data.venta, carrito, totalCarrito, response.data.folio);
 
-            alert(`Venta registrada exitosamente\nFolio: ${response.data.folio}`);
+            alert(`✅ Venta registrada exitosamente\nFolio: ${response.data.folio}`);
 
             setCarrito([]);
             setClienteNombre('');
@@ -146,40 +214,7 @@ function Ventas() {
         }
     };
 
-    const generarTicketPDF = async (venta, carrito, total, folio) => {
-        try {
-            const blob = await pdf(
-                <TicketPDF
-                    venta={venta}
-                    carrito={carrito}
-                    total={total}
-                    folio={folio}
-                    vendedor={usuario.nombre}
-                />
-            ).toBlob();
-
-            const pdfUrl = URL.createObjectURL(blob);
-
-            if (clienteTelefono) {
-                const mensaje = `VIVERO JUANITO\n\nFolio: ${folio}\nTotal: $${total}\n\nAdjunto encontrará su ticket en PDF.\n\n¡Gracias por su compra!`;
-                const urlWhatsApp = `https://wa.me/${clienteTelefono}?text=${encodeURIComponent(mensaje)}`;
-                window.open(urlWhatsApp, '_blank');
-                const link = document.createElement('a');
-                link.href = pdfUrl;
-                link.download = `ticket_${folio}.pdf`;
-                link.click();
-            } else {
-                const link = document.createElement('a');
-                link.href = pdfUrl;
-                link.download = `ticket_${folio}.pdf`;
-                link.click();
-            }
-        } catch (error) {
-            console.error('Error generando PDF:', error);
-            alert('Error al generar el ticket PDF');
-        }
-    };
-
+    // ==================== MODAL AGREGAR PRODUCTO ====================
     const ModalAgregar = ({ planta, onClose, onAgregar }) => {
         const [unidadVenta, setUnidadVenta] = useState('Pieza');
         const [cantidad, setCantidad] = useState(1);
@@ -272,6 +307,7 @@ function Ventas() {
         );
     };
 
+    // ==================== SECCIÓN CATEGORÍA ====================
     const SeccionCategoria = ({ titulo, plantas: lista, colorBg }) => {
         if (lista.length === 0) return null;
         const icono = getIconoCategoria(titulo === 'Ornato' ? 'ornato' : titulo === 'Jardinería' ? 'jardineria' : titulo === 'Hierbas de olor' ? 'hierbas' : 'otras');
@@ -452,7 +488,6 @@ function Ventas() {
                                             <option value="Transferencia">Transferencia</option>
                                         </select>
                                     </div>
-                                    {/* ✅ SECCIÓN DE AHORRO ELIMINADA - ya es automático */}
                                 </div>
 
                                 {/* Botones de acción */}

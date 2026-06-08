@@ -55,15 +55,16 @@ const registrarVenta = async (req, res) => {
 
         const folio_ticket = generarFolio();
 
-        // Insertar venta
+        // ✅ Insertar venta con fecha de MÉXICO (CDMX)
         const ventaResult = await pool.query(
             `INSERT INTO ventas (folio_ticket, fecha_servidor, total_pagado, metodo_pago, id_usuario, cliente_nombre, cliente_telefono)
-             VALUES ($1, NOW(), $2, $3, $4, $5, $6)
+             VALUES ($1, NOW() AT TIME ZONE 'America/Mexico_City', $2, $3, $4, $5, $6)
              RETURNING *`,
             [folio_ticket, total_pagado, metodo_pago, id_usuario, cliente_nombre || null, cliente_telefono || null]
         );
 
         const venta = ventaResult.rows[0];
+        const fechaVenta = venta.fecha_servidor; // ✅ Fecha correcta de México
 
         // Insertar detalles y actualizar stock
         for (const item of carrito) {
@@ -79,11 +80,11 @@ const registrarVenta = async (req, res) => {
             );
         }
 
-        // Guardar ahorro
+        // ✅ GUARDAR AHORRO CON LA MISMA FECHA DE LA VENTA
         await pool.query(
             `INSERT INTO ahorros (fecha, porcentaje, monto_ahorrado, destino, id_venta)
-             VALUES (CURRENT_DATE, $1, $2, 'Renta', $3)`,
-            [porcentajeAhorro, monto_ahorrado, venta.id_venta]
+             VALUES ($1, $2, $3, 'Renta', $4)`,
+            [fechaVenta, porcentajeAhorro, monto_ahorrado, venta.id_venta]
         );
 
         res.status(201).json({
@@ -93,7 +94,8 @@ const registrarVenta = async (req, res) => {
             folio: folio_ticket,
             ahorro: {
                 porcentaje: porcentajeAhorro,
-                monto: monto_ahorrado
+                monto: monto_ahorrado,
+                fecha: fechaVenta
             }
         });
 
@@ -109,7 +111,7 @@ const getVentasHoy = async (req, res) => {
         const result = await pool.query(
             `SELECT COUNT(*) as total_ventas, COALESCE(SUM(total_pagado), 0) as total_ingresos
              FROM ventas 
-             WHERE DATE(fecha_servidor) = CURRENT_DATE`
+             WHERE DATE(fecha_servidor) = CURRENT_DATE AT TIME ZONE 'America/Mexico_City'`
         );
         res.json(result.rows[0]);
     } catch (error) {
@@ -294,7 +296,7 @@ const getVentasPorDia = async (req, res) => {
                 COUNT(*) as total_ventas,
                 COALESCE(SUM(total_pagado), 0) as total_ingresos
              FROM ventas
-             WHERE fecha_servidor >= CURRENT_DATE - INTERVAL '7 days'
+             WHERE fecha_servidor >= (CURRENT_DATE AT TIME ZONE 'America/Mexico_City' - INTERVAL '7 days')
              GROUP BY DATE(fecha_servidor)
              ORDER BY fecha ASC`
         );
