@@ -15,7 +15,7 @@ export default defineConfig({
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
-        start_url: '/',
+        start_url: '/viveroJuanito/',
         icons: [
           {
             src: 'logo.png',
@@ -23,7 +23,7 @@ export default defineConfig({
             type: 'image/png'
           },
           {
-            src: 'icon-512.png',
+            src: 'logo.png',
             sizes: '512x512',
             type: 'image/png'
           }
