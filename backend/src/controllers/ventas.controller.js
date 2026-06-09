@@ -74,6 +74,7 @@ const registrarVenta = async (req, res) => {
         );
 
         const venta = ventaResult.rows[0];
+        const fechaVenta = venta.fecha_servidor; // ✅ Fecha correcta de México
 
         for (const item of carrito) {
             await pool.query(
@@ -122,7 +123,7 @@ const getVentasHoy = async (req, res) => {
         const result = await pool.query(
             `SELECT COUNT(*) as total_ventas, COALESCE(SUM(total_pagado), 0) as total_ingresos
              FROM ventas 
-             WHERE DATE(fecha_servidor) = CURRENT_DATE`
+             WHERE DATE(fecha_servidor) = CURRENT_DATE AT TIME ZONE 'America/Mexico_City'`
         );
         res.json(result.rows[0]);
     } catch (error) {
@@ -338,7 +339,7 @@ const getVentasPorDia = async (req, res) => {
                 COUNT(*) as total_ventas,
                 COALESCE(SUM(total_pagado), 0) as total_ingresos
              FROM ventas
-             WHERE fecha_servidor >= CURRENT_DATE - INTERVAL '7 days'
+             WHERE fecha_servidor >= (CURRENT_DATE AT TIME ZONE 'America/Mexico_City' - INTERVAL '7 days')
              GROUP BY DATE(fecha_servidor)
              ORDER BY fecha ASC`
         );
