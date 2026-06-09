@@ -12,6 +12,7 @@ const generarFolio = () => {
 };
 
 // ==================== REGISTRAR VENTA ====================
+// ==================== REGISTRAR VENTA (NUEVA LÓGICA) ====================
 const registrarVenta = async (req, res) => {
     const {
         carrito,
@@ -31,10 +32,12 @@ const registrarVenta = async (req, res) => {
     }
 
     try {
-        // Verificar stock
+        // Verificar stock y calcular costos totales
+        let costoTotal = 0;
+        
         for (const item of carrito) {
             const stockResult = await pool.query(
-                'SELECT stock, nombre FROM plantas WHERE id_planta = $1',
+                'SELECT stock, nombre, costo_compra FROM plantas WHERE id_planta = $1',
                 [item.id_planta]
             );
 
@@ -47,25 +50,31 @@ const registrarVenta = async (req, res) => {
                     error: `Stock insuficiente para ${stockResult.rows[0].nombre}. Disponible: ${stockResult.rows[0].stock}, Solicitado: ${item.cantidad_real}`
                 });
             }
+            
+            const costoPlanta = (stockResult.rows[0].costo_compra || 0) * item.cantidad_real;
+            costoTotal += costoPlanta;
         }
 
         // Obtener porcentaje de ahorro actual
         const porcentajeAhorro = await getPorcentajeActual();
-        const monto_ahorrado = total_pagado * (porcentajeAhorro / 100);
+        
+        // 🔥 NUEVA LÓGICA
+        const comision = total_pagado * 0.30;
+        const gananciaBruta = total_pagado - costoTotal - comision;
+        const ahorro = gananciaBruta * (porcentajeAhorro / 100);
+        const gananciaReal = gananciaBruta - ahorro;
 
         const folio_ticket = generarFolio();
 
-        // Insertar venta
         const ventaResult = await pool.query(
             `INSERT INTO ventas (folio_ticket, fecha_servidor, total_pagado, metodo_pago, id_usuario, cliente_nombre, cliente_telefono)
-             VALUES ($1, NOW(), $2, $3, $4, $5, $6)
+             VALUES ($1, NOW() AT TIME ZONE 'America/Mexico_City', $2, $3, $4, $5, $6)
              RETURNING *`,
             [folio_ticket, total_pagado, metodo_pago, id_usuario, cliente_nombre || null, cliente_telefono || null]
         );
 
         const venta = ventaResult.rows[0];
 
-        // Insertar detalles y actualizar stock
         for (const item of carrito) {
             await pool.query(
                 `INSERT INTO detalle_venta (id_venta, id_planta, cantidad, precio_pactado, subtotal, unidad_medida)
@@ -79,11 +88,10 @@ const registrarVenta = async (req, res) => {
             );
         }
 
-        // Guardar ahorro
         await pool.query(
             `INSERT INTO ahorros (fecha, porcentaje, monto_ahorrado, destino, id_venta)
-             VALUES (CURRENT_DATE, $1, $2, 'Renta', $3)`,
-            [porcentajeAhorro, monto_ahorrado, venta.id_venta]
+             VALUES (CURRENT_DATE AT TIME ZONE 'America/Mexico_City', $1, $2, 'Renta', $3)`,
+            [porcentajeAhorro, ahorro, venta.id_venta]
         );
 
         res.status(201).json({
@@ -91,9 +99,14 @@ const registrarVenta = async (req, res) => {
             mensaje: 'Venta registrada exitosamente',
             venta: venta,
             folio: folio_ticket,
-            ahorro: {
-                porcentaje: porcentajeAhorro,
-                monto: monto_ahorrado
+            calculos: {
+                total_venta: total_pagado,
+                costo_total: costoTotal,
+                comision: comision,
+                ganancia_bruta: gananciaBruta,
+                ahorro_porcentaje: porcentajeAhorro,
+                ahorro_monto: ahorro,
+                ganancia_real: gananciaReal
             }
         });
 
@@ -229,7 +242,43 @@ const getGananciasPorPlanta = async (req, res) => {
     }
 };
 
-// ==================== GANANCIAS REALES POR PLANTA ====================
+// ==================== CALCULAR GANANCIA ANTES DE VENDER ====================
+const calcularGananciaPreview = async (req, res) => {
+    const { carrito, total_pagado } = req.body;
+
+    try {
+        let costoTotal = 0;
+        
+        for (const item of carrito) {
+            const plantaResult = await pool.query(
+                'SELECT costo_compra FROM plantas WHERE id_planta = $1',
+                [item.id_planta]
+            );
+            if (plantaResult.rows.length > 0) {
+                costoTotal += (plantaResult.rows[0].costo_compra || 0) * item.cantidad_real;
+            }
+        }
+
+        const porcentajeAhorro = await getPorcentajeActual();
+        const comision = total_pagado * 0.30;
+        const gananciaBruta = total_pagado - costoTotal - comision;
+        const ahorro = gananciaBruta * (porcentajeAhorro / 100);
+        const gananciaReal = gananciaBruta - ahorro;
+
+        res.json({
+            ganancia_real: gananciaReal,
+            ganancia_bruta: gananciaBruta,
+            ahorro: ahorro,
+            comision: comision,
+            porcentaje_ahorro: porcentajeAhorro,
+            es_perdida: gananciaReal < 0
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Error al calcular ganancia' });
+    }
+};
+// ==================== GANANCIAS REALES POR PLANTA (NUEVA LÓGICA) ====================
 const getGananciasRealesPorPlanta = async (req, res) => {
     try {
         const configResult = await pool.query('SELECT porcentaje FROM config_ahorros LIMIT 1');
@@ -246,38 +295,33 @@ const getGananciasRealesPorPlanta = async (req, res) => {
                 COALESCE(SUM(dv.subtotal), 0) as total_vendido,
                 COALESCE(SUM(dv.cantidad * p.costo_compra), 0) as costo_total,
                 COALESCE(SUM(dv.subtotal) * 0.30, 0) as comision_total,
-                COALESCE((
-                    SELECT SUM(a.monto_ahorrado) 
-                    FROM ahorros a 
-                    WHERE a.id_venta IN (
-                        SELECT v.id_venta FROM ventas v
-                        JOIN detalle_venta dv2 ON v.id_venta = dv2.id_venta
-                        WHERE dv2.id_planta = p.id_planta
-                    )
-                ), 0) as ahorro_total,
-                COALESCE(SUM(dv.subtotal), 0) - 
-                COALESCE(SUM(dv.cantidad * p.costo_compra), 0) - 
-                COALESCE(SUM(dv.subtotal) * 0.30, 0) - 
-                COALESCE((
-                    SELECT SUM(a.monto_ahorrado) 
-                    FROM ahorros a 
-                    WHERE a.id_venta IN (
-                        SELECT v.id_venta FROM ventas v
-                        JOIN detalle_venta dv2 ON v.id_venta = dv2.id_venta
-                        WHERE dv2.id_planta = p.id_planta
-                    )
-                ), 0) as ganancia_real
+                -- 🔥 NUEVO CÁLCULO: Ahorro sobre la ganancia bruta
+                COALESCE(
+                    (COALESCE(SUM(dv.subtotal), 0) - 
+                     COALESCE(SUM(dv.cantidad * p.costo_compra), 0) - 
+                     COALESCE(SUM(dv.subtotal) * 0.30, 0)
+                    ) * ($1 / 100), 0
+                ) as ahorro_total,
+                -- 🔥 NUEVO CÁLCULO: Ganancia Real = Ganancia Bruta - Ahorro
+                COALESCE(
+                    (COALESCE(SUM(dv.subtotal), 0) - 
+                     COALESCE(SUM(dv.cantidad * p.costo_compra), 0) - 
+                     COALESCE(SUM(dv.subtotal) * 0.30, 0)
+                    ) * (1 - $1 / 100), 0
+                ) as ganancia_real
              FROM plantas p
              LEFT JOIN detalle_venta dv ON p.id_planta = dv.id_planta
              GROUP BY p.id_planta, p.nombre, p.categoria, p.stock
              ORDER BY ganancia_real DESC
         `;
 
-        const result = await pool.query(query);
+        const result = await pool.query(query, [porcentajeAhorroActual]);
+        
         res.json({
             plantas: result.rows,
             porcentaje_ahorro_actual: porcentajeAhorroActual,
-            porcentaje_comision: porcentajeComision
+            porcentaje_comision: porcentajeComision,
+            nota: "Ahorro calculado sobre la ganancia bruta (venta - costo - comision)"
         });
     } catch (error) {
         console.error('Error al obtener ganancias reales:', error);

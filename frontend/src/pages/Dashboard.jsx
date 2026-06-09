@@ -28,16 +28,16 @@ function Dashboard() {
     }, []);
 
     const menuItems = [
-        { to: "/dashboard/ventas", icon: ShoppingCart, title: "Punto de Venta", desc: "Registrar ventas" },
-        { to: "/dashboard/mis-ventas", icon: Receipt, title: "Mis Ventas", desc: isDueño ? "Todas las ventas" : "Tus ventas" },
-        { to: "/dashboard/plantas", icon: Leaf, title: "Plantas", desc: "Gestionar catálogo", admin: true },
-        { to: "/dashboard/proveedores", icon: Truck, title: "Proveedores", desc: "Gestionar proveedores", admin: true },
-        { to: "/dashboard/usuarios", icon: Users, title: "Usuarios", desc: "Gestionar vendedores", admin: true },
-        { to: "/dashboard/reporte-ganancias", icon: BarChart3, title: "Ganancias", desc: "Reporte por planta", admin: true },
-        { to: "/dashboard/mermas", icon: AlertTriangle, title: "Mermas", desc: "Plantas perdidas", admin: true },
-        { to: "/dashboard/pedidos", icon: ClipboardList, title: "Pedidos", desc: "Pedidos de clientes", admin: true },
-        { to: "/dashboard/ahorros", icon: PiggyBank, title: "Ahorros", desc: "Ahorro para renta", admin: true }
-    ];
+    { to: "/dashboard/ventas", icon: ShoppingCart, title: "Punto de Venta", desc: "Registrar ventas" },
+    { to: "/dashboard/mis-ventas", icon: Receipt, title: "Mis Ventas", desc: isDueño ? "Todas las ventas" : "Tus ventas" },
+    { to: "/dashboard/plantas", icon: Leaf, title: "Plantas", desc: "Gestionar catálogo", admin: true },
+    { to: "/dashboard/proveedores", icon: Truck, title: "Proveedores", desc: "Gestionar proveedores", admin: true },
+    { to: "/dashboard/usuarios", icon: Users, title: "Usuarios", desc: "Gestionar vendedores", admin: true },
+    // { to: "/dashboard/reporte-ganancias", icon: BarChart3, title: "Ganancias", desc: "Reporte por planta", admin: true },  // ❌ OCULTO
+    { to: "/dashboard/mermas", icon: AlertTriangle, title: "Mermas", desc: "Plantas perdidas", admin: true },
+    { to: "/dashboard/pedidos", icon: ClipboardList, title: "Pedidos", desc: "Pedidos de clientes", admin: true },
+    // { to: "/dashboard/ahorros", icon: PiggyBank, title: "Ahorros", desc: "Ahorro para renta", admin: true }  // ❌ OCULTO
+];
 
     const filteredMenu = menuItems.filter(item => !item.admin || (item.admin && isDueño));
 

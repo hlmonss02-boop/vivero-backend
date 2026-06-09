@@ -79,7 +79,7 @@ function Login() {
                 <input
                   type="email"
                   name="correo"
-                  placeholder="admin@vivero.com"
+                  placeholder="correo"
                   value={form.correo}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition"

@@ -429,17 +429,7 @@ function Ventas() {
                                             style={{ borderColor: '#CADBB7' }}
                                         />
                                     </div>
-                                    <div className="relative">
-                                        <Phone size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#93A267' }} />
-                                        <input
-                                            type="tel"
-                                            placeholder="Teléfono para WhatsApp"
-                                            value={clienteTelefono}
-                                            onChange={(e) => setClienteTelefono(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-3 rounded-lg border"
-                                            style={{ borderColor: '#CADBB7' }}
-                                        />
-                                    </div>
+                                    
                                     <div className="relative">
                                         <CreditCard size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#93A267' }} />
                                         <select

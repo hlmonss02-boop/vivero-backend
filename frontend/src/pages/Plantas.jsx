@@ -3,11 +3,17 @@ import axios from 'axios';
 import {
     Leaf, Search, Plus, Edit2, Trash2, Save, X, Package,
     DollarSign, Truck, Tag, Image, FileText, AlertCircle,
-    Flower2, Trees, Sprout, FolderOpen, Box, TrendingUp
+    Flower2, Trees, Sprout, FolderOpen, Box, TrendingUp,
+    Settings  
 } from 'lucide-react';
 import { API_URL } from '../config';
 
 function Plantas() {
+    const [stockMinimo, setStockMinimo] = useState(30);
+    const [showConfigStock, setShowConfigStock] = useState(false);
+    const [stockMinimoInput, setStockMinimoInput] = useState(30);
+    const [showModalStockBajo, setShowModalStockBajo] = useState(false);
+    const [plantasStockBajo, setPlantasStockBajo] = useState([]);
     const [plantas, setPlantas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -21,9 +27,9 @@ function Plantas() {
         precio_base: '',
         precio_ciento: '',
         precio_docena: '',
-        stock: '',           // ← Cambiado de 0 a ''
+        stock: '',
         unidad_medida: 'Pieza',
-        costo_compra: '',    // ← Cambiado de 0 a ''
+        costo_compra: '',
         imagen: null,
         id_proveedor: ''
     });
@@ -31,13 +37,34 @@ function Plantas() {
     useEffect(() => {
         cargarPlantas();
         cargarProveedores();
+
+        const savedStockMinimo = localStorage.getItem('stockMinimo');
+        if (savedStockMinimo) {
+            setStockMinimo(parseInt(savedStockMinimo));
+            setStockMinimoInput(parseInt(savedStockMinimo));
+        }
     }, []);
+
+    const verPlantasStockBajo = () => {
+        const filtradas = plantas.filter(p => p.stock < stockMinimo);
+        setPlantasStockBajo(filtradas);
+        setShowModalStockBajo(true);
+    };
+
+    const guardarStockMinimo = () => {
+        if (stockMinimoInput >= 1) {
+            setStockMinimo(stockMinimoInput);
+            setShowConfigStock(false);
+            localStorage.setItem('stockMinimo', stockMinimoInput);
+        } else {
+            alert('El stock mínimo debe ser mayor a 0');
+        }
+    };
 
     const cargarPlantas = async () => {
         setLoading(true);
         try {
             const response = await axios.get(`${API_URL}/plantas`);
-            // Ordenar alfabéticamente por nombre
             const plantasOrdenadas = response.data.sort((a, b) =>
                 a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
             );
@@ -88,51 +115,20 @@ function Plantas() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // ✅ VALIDACIONES
-        // Validar nombre
         if (!form.nombre.trim()) {
             alert('El nombre de la planta es requerido');
             return;
         }
 
-        // Validar que el nombre solo tenga letras y espacios
-        const nombreRegex = /^[a-zA-ZáéíóúñÑ\s]+$/;
-        if (!nombreRegex.test(form.nombre.trim())) {
-            alert('El nombre solo puede contener letras y espacios');
-            return;
-        }
-
-        // Validar precio
         if (!form.precio_base || form.precio_base <= 0) {
             alert('El precio debe ser mayor a 0');
             return;
         }
 
-        // Validar que el precio sea número válido
-        if (isNaN(parseFloat(form.precio_base))) {
-            alert('El precio debe ser un número válido');
-            return;
-        }
-
-        // Validar stock
         if (form.stock < 0) {
             alert('El stock no puede ser negativo');
             return;
         }
-
-        // Validar teléfono (si se ingresa)
-        if (form.telefono && !/^\d{10}$/.test(form.telefono)) {
-            alert('El teléfono debe tener 10 dígitos');
-            return;
-        }
-
-        // Validar correo (si se ingresa)
-        if (form.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) {
-            alert('Ingrese un correo electrónico válido');
-            return;
-        }
-
-
 
         const formData = new FormData();
         formData.append('nombre', form.nombre);
@@ -231,7 +227,7 @@ function Plantas() {
     const isDueño = usuario.rol === 'Dueño';
 
     const totalPlantas = plantas.length;
-    const stockBajo = plantas.filter(p => p.stock < 20).length;
+    const stockBajo = plantas.filter(p => p.stock < stockMinimo).length;
 
     const SeccionCategoria = ({ titulo, icono: Icono, plantas: lista, colorBg }) => {
         if (lista.length === 0) return null;
@@ -259,14 +255,13 @@ function Plantas() {
                             <div className="p-4">
                                 <div className="flex items-start justify-between">
                                     <h3 className="text-lg font-bold" style={{ color: '#1B4332' }}>{planta.nombre}</h3>
-                                    {planta.stock < 20 && (
+                                    {planta.stock < stockMinimo && (
                                         <span className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1" style={{ backgroundColor: '#D97757', color: 'white' }}>
                                             <AlertCircle size={10} /> Stock bajo
                                         </span>
                                     )}
                                 </div>
 
-                                {/* Categoría */}
                                 {planta.categoria && (
                                     <p className="text-xs mt-1 flex items-center gap-1" style={{ color: '#93A267' }}>
                                         {getIconoCategoria(planta.categoria)}
@@ -274,7 +269,6 @@ function Plantas() {
                                     </p>
                                 )}
 
-                                {/* PROVEEDOR - NUEVO */}
                                 {planta.id_proveedor && planta.proveedor_nombre && (
                                     <div className="flex items-center gap-1 mt-1 text-xs" style={{ color: '#93A267' }}>
                                         <Truck size={10} />
@@ -282,14 +276,11 @@ function Plantas() {
                                     </div>
                                 )}
 
-                                {/* Descripción */}
                                 {planta.descripcion && (
                                     <p className="text-gray-500 text-sm mt-1 line-clamp-2">{planta.descripcion}</p>
                                 )}
 
-                                {/* TRES PRECIOS - VERSIÓN MEJORADA */}
                                 <div className="mt-3 space-y-2">
-                                    {/* Precio por pieza */}
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <DollarSign size={14} style={{ color: '#D97757' }} />
@@ -300,7 +291,6 @@ function Plantas() {
                                         </p>
                                     </div>
 
-                                    {/* Precio por ciento */}
                                     {planta.precio_ciento > 0 && (
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
@@ -313,7 +303,6 @@ function Plantas() {
                                         </div>
                                     )}
 
-                                    {/* Precio por docena */}
                                     {planta.precio_docena > 0 && (
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
@@ -326,7 +315,6 @@ function Plantas() {
                                         </div>
                                     )}
 
-                                    {/* Costo de compra (solo admin) */}
                                     {isDueño && planta.costo_compra > 0 && (
                                         <div className="flex items-center justify-between pt-1 border-t" style={{ borderColor: '#CADBB7' }}>
                                             <div className="flex items-center gap-2">
@@ -339,34 +327,24 @@ function Plantas() {
                                         </div>
                                     )}
 
-                                    {/* Stock */}
                                     <div className="flex items-center justify-between pt-1">
                                         <div className="flex items-center gap-2">
-                                            <Package size={12} style={{ color: planta.stock < 20 ? '#D97757' : '#93A267' }} />
+                                            <Package size={12} style={{ color: planta.stock < stockMinimo ? '#D97757' : '#93A267' }} />
                                             <span className="text-xs" style={{ color: '#1B4332' }}>Stock:</span>
                                         </div>
-                                        <p className={`text-xs font-medium ${planta.stock < 20 ? 'font-bold' : ''}`}
-                                            style={{ color: planta.stock < 20 ? '#D97757' : '#93A267' }}>
-                                            {planta.stock} unidades {planta.stock < 20 && '(⚠️ Stock bajo)'}
+                                        <p className={`text-xs font-medium ${planta.stock < stockMinimo ? 'font-bold' : ''}`}
+                                            style={{ color: planta.stock < stockMinimo ? '#D97757' : '#93A267' }}>
+                                            {planta.stock} unidades {planta.stock < stockMinimo && '⚠️ Stock bajo'}
                                         </p>
                                     </div>
                                 </div>
 
-                                {/* Botones de acción (solo admin) */}
                                 {isDueño && (
                                     <div className="flex gap-2 mt-4">
-                                        <button
-                                            onClick={() => editarPlanta(planta)}
-                                            className="flex-1 py-2 rounded-lg text-sm font-medium transition hover:opacity-80 flex items-center justify-center gap-1"
-                                            style={{ backgroundColor: '#E8EFE0', color: '#1B4332' }}
-                                        >
+                                        <button onClick={() => editarPlanta(planta)} className="flex-1 py-2 rounded-lg text-sm font-medium transition hover:opacity-80 flex items-center justify-center gap-1" style={{ backgroundColor: '#E8EFE0', color: '#1B4332' }}>
                                             <Edit2 size={14} /> Editar
                                         </button>
-                                        <button
-                                            onClick={() => eliminarPlanta(planta.id_planta, planta.nombre)}
-                                            className="flex-1 py-2 rounded-lg text-sm font-medium transition hover:opacity-80 flex items-center justify-center gap-1 text-white"
-                                            style={{ backgroundColor: '#D97757' }}
-                                        >
+                                        <button onClick={() => eliminarPlanta(planta.id_planta, planta.nombre)} className="flex-1 py-2 rounded-lg text-sm font-medium transition hover:opacity-80 flex items-center justify-center gap-1 text-white" style={{ backgroundColor: '#D97757' }}>
                                             <Trash2 size={14} /> Eliminar
                                         </button>
                                     </div>
@@ -383,6 +361,7 @@ function Plantas() {
         <div>
             {/* Tarjetas de resumen */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Tarjeta total de plantas */}
                 <div className="rounded-xl p-5 shadow-md" style={{ backgroundColor: '#485935' }}>
                     <div className="flex justify-between items-center">
                         <div>
@@ -396,15 +375,34 @@ function Plantas() {
                         </div>
                     </div>
                 </div>
+
+                {/* Tarjeta de Stock bajo CON CONFIGURACIÓN */}
                 <div className="rounded-xl p-5 shadow-md" style={{ backgroundColor: '#D97757' }}>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <p className="text-sm opacity-80 flex items-center gap-1 text-white">
-                                <AlertCircle size={16} /> Plantas con stock bajo
-                            </p>
+                    <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                                <p className="text-sm opacity-80 flex items-center gap-1 text-white">
+                                    <AlertCircle size={16} /> Stock bajo
+                                </p>
+                                <button 
+                                    onClick={() => {
+                                        setStockMinimoInput(stockMinimo);
+                                        setShowConfigStock(true);
+                                    }}
+                                    className="text-white text-xs opacity-70 hover:opacity-100 transition"
+                                    title="Configurar alerta"
+                                >
+                                    ⚙️
+                                </button>
+                            </div>
                             <p className="text-3xl font-bold mt-1 text-white">{stockBajo}</p>
+                            <p className="text-xs opacity-70 text-white mt-1">
+                                Plantas con menos de {stockMinimo} unidades
+                            </p>
                         </div>
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer hover:scale-105 transition" 
+                             style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+                             onClick={verPlantasStockBajo}>
                             <Package size={24} style={{ color: 'white' }} />
                         </div>
                     </div>
@@ -531,6 +529,106 @@ function Plantas() {
                     <SeccionCategoria titulo="Hierbas de olor" icono={Sprout} plantas={plantasPorCategoria.hierbas} colorBg="bg-green-50" />
                     <SeccionCategoria titulo="Otras categorías" icono={FolderOpen} plantas={plantasPorCategoria.otras} colorBg="bg-gray-50" />
                 </>
+            )}
+
+            {/* Modal de plantas con stock bajo */}
+            {showModalStockBajo && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: '#1B4332' }}>
+                                <AlertCircle size={20} style={{ color: '#D97757' }} />
+                                Plantas con stock bajo (&lt; {stockMinimo} unidades)
+                            </h2>
+                            <button onClick={() => setShowModalStockBajo(false)} className="text-gray-400 text-2xl hover:text-gray-600">&times;</button>
+                        </div>
+
+                        {plantasStockBajo.length === 0 ? (
+                            <p className="text-center py-10" style={{ color: '#93A267' }}>No hay plantas con stock bajo</p>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-4 gap-2 pb-2 border-b font-bold" style={{ borderColor: '#CADBB7', color: '#1B4332' }}>
+                                    <p>🌿 Planta</p>
+                                    <p className="text-center">📦 Stock</p>
+                                    <p className="text-center">💰 Precio</p>
+                                    <p className="text-right">🏷️ Categoría</p>
+                                </div>
+                                {plantasStockBajo.map((planta) => (
+                                    <div key={planta.id_planta} className="grid grid-cols-4 gap-2 py-2 border-b" style={{ borderColor: '#CADBB7' }}>
+                                        <p className="font-medium" style={{ color: '#1B4332' }}>{planta.nombre}</p>
+                                        <p className="text-center font-bold" style={{ color: '#D97757' }}>{planta.stock}</p>
+                                        <p className="text-center" style={{ color: '#93A267' }}>${planta.precio_base}</p>
+                                        <p className="text-right" style={{ color: '#93A267' }}>{planta.categoria || 'Sin categoría'}</p>
+                                    </div>
+                                ))}
+
+                                <div className="mt-4 pt-3 border-t flex justify-between font-bold" style={{ borderColor: '#CADBB7', color: '#1B4332' }}>
+                                    <p>Total de plantas con stock bajo:</p>
+                                    <p style={{ color: '#D97757' }}>{plantasStockBajo.length} plantas</p>
+                                </div>
+
+                                <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#E8EFE0' }}>
+                                    <p className="text-sm flex items-center gap-2" style={{ color: '#1B4332' }}>
+                                        <Package size={14} style={{ color: '#D97757' }} />
+                                        Sugerencia: Revise el inventario y realice pedidos para estas plantas.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex justify-end mt-6">
+                            <button onClick={() => setShowModalStockBajo(false)} className="px-6 py-2 rounded-lg font-semibold transition hover:opacity-80 text-white" style={{ backgroundColor: '#D97757' }}>
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal para configurar stock mínimo */}
+            {showConfigStock && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: '#1B4332' }}>
+                                <Settings size={20} style={{ color: '#D97757' }} />
+                                Configurar alerta de stock
+                            </h2>
+                            <button onClick={() => setShowConfigStock(false)} className="text-gray-400 text-2xl hover:text-gray-600">&times;</button>
+                        </div>
+
+                        <p className="text-sm mb-4" style={{ color: '#93A267' }}>
+                            Establezca el número mínimo de unidades para recibir alertas de stock bajo.
+                        </p>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-bold mb-2" style={{ color: '#1B4332' }}>
+                                Stock mínimo actual: <span style={{ color: '#D97757' }}>{stockMinimo}</span> unidades
+                            </label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="200"
+                                value={stockMinimoInput}
+                                onChange={(e) => setStockMinimoInput(parseInt(e.target.value) || 0)}
+                                className="w-full border p-3 rounded-lg focus:outline-none focus:ring-1"
+                                style={{ borderColor: '#CADBB7' }}
+                            />
+                            <p className="text-xs mt-2" style={{ color: '#93A267' }}>
+                                Las plantas con stock menor a este número mostrarán alerta.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                            <button onClick={() => setShowConfigStock(false)} className="flex-1 py-2 rounded-lg font-semibold transition hover:opacity-80" style={{ backgroundColor: '#CADBB7', color: '#1B4332' }}>
+                                Cancelar
+                            </button>
+                            <button onClick={guardarStockMinimo} className="flex-1 py-2 rounded-lg font-semibold transition hover:opacity-80 text-white" style={{ backgroundColor: '#D97757' }}>
+                                Guardar configuración
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
